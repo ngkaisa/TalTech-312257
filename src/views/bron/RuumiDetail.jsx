@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { BRONEERINGUD, BRONEERINGU_STAATUS, RUUMID } from '../../BronStatisticsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
+import { RuumiGalerii } from '../../components/bron/RuumiGalerii';
 
 function fmt(iso) {
     return new Date(iso).toLocaleString('et-EE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -35,6 +36,8 @@ export default function RuumiDetail() {
                     Broneeri see ruum
                 </button>
             </div>
+
+            <RuumiGalerii ruumitypp={room.ruumitypp} alt={room.code} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[

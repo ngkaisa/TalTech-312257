@@ -521,12 +521,134 @@ a { color: inherit; }
   box-shadow: 0 4px 16px rgba(52, 43, 96, .12);
   border-color: var(--tt-purple-300);
 }
+.bron-room-card__img-wrap {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
 .bron-room-card__img {
   width: 100%;
-  height: 140px;
+  height: 160px;
   object-fit: cover;
   background: var(--tt-purple-100);
+  display: block;
+  transition: opacity .2s;
 }
+
+/* Carousel nav nupud (kasutatakse ka galeriis) */
+.bron-img-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,.45);
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition: background .15s;
+  padding: 0;
+  z-index: 2;
+}
+.bron-img-nav:hover { background: rgba(0,0,0,.7); }
+.bron-img-nav--prev { left: .4rem; }
+.bron-img-nav--next { right: .4rem; }
+.bron-img-nav .material-icons { font-size: 1.2rem; }
+
+/* Carousel dots */
+.bron-img-dots {
+  position: absolute;
+  bottom: .4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: .3rem;
+  z-index: 2;
+}
+.bron-img-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  transition: background .15s;
+}
+.bron-img-dot.active { background: #fff; }
+
+/* ══════════════════════════════════════════════════════════════════
+   GALERII (RuumiDetail)
+   ══════════════════════════════════════════════════════════════════ */
+.bron-galerii {
+  margin-bottom: 1.5rem;
+  border-radius: var(--tt-card-radius);
+  overflow: hidden;
+  background: var(--tt-surface);
+  border: 1px solid var(--tt-border);
+}
+.bron-galerii__main {
+  position: relative;
+  overflow: hidden;
+}
+.bron-galerii__img {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  display: block;
+  background: var(--tt-purple-100);
+  transition: opacity .2s;
+}
+.bron-galerii__counter {
+  position: absolute;
+  bottom: .75rem;
+  right: .75rem;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .2rem .6rem;
+  border-radius: 20px;
+  z-index: 2;
+}
+.bron-galerii .bron-img-nav {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.bron-galerii .bron-img-nav .material-icons { font-size: 1.5rem; }
+
+/* Thumbnailid */
+.bron-galerii__thumbs {
+  display: flex;
+  gap: .5rem;
+  padding: .6rem .75rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.bron-galerii__thumb {
+  flex-shrink: 0;
+  width: 90px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color .15s;
+  background: none;
+}
+.bron-galerii__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.bron-galerii__thumb.active { border-color: var(--tt-pink-500); }
+.bron-galerii__thumb:hover:not(.active) { border-color: var(--tt-purple-300); }
 .bron-room-card__body { padding: 1rem; flex: 1; }
 .bron-room-card__name { font-weight: 700; color: var(--tt-purple-500); font-size: .95rem; }
 .bron-room-card__meta { font-size: .8rem; color: var(--tt-text-muted); margin-top: .2rem; }

@@ -1,17 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
-import { HOONED, RUUMID, RUUMITYYBID } from '../../BronStatisticsService';
 import { searchRooms } from '../../BronBookingsService';
-
-const ROOM_PHOTOS = {
-    aula: 'https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=200&fit=crop',
-    uldkasutatav_auditoorium: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400&h=200&fit=crop',
-    seminariruum: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=200&fit=crop',
-    arvutiklass: 'https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=200&fit=crop',
-    labor: 'https://images.unsplash.com/photo-1532094349884-543559ba97f4?w=400&h=200&fit=crop',
-};
-const DEFAULT_PHOTO = 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?w=400&h=200&fit=crop';
+import { HOONED, RUUMITYYBID } from '../../BronStatisticsService';
+import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
+import { RuumiKaardiPilt } from '../../components/bron/RuumiGalerii';
 
 export default function OtsiRuumi() {
     const navigate = useNavigate();
@@ -72,25 +64,28 @@ export default function OtsiRuumi() {
             <div className="bron-card-grid">
                 {results.map(room => (
                     <div key={room.id} className="bron-room-card" onClick={() => navigate(`/ruum/${room.id}`)}>
-                        <img
-                            src={ROOM_PHOTOS[room.ruumitypp] || DEFAULT_PHOTO}
-                            alt={room.name}
-                            className="bron-room-card__img"
-                            onError={e => { e.target.src = DEFAULT_PHOTO; }}
-                        />
+                        <RuumiKaardiPilt ruumitypp={room.ruumitypp} alt={room.code} />
                         <div className="bron-room-card__body">
                             <div className="bron-room-card__name">{room.code}</div>
                             <div className="bron-room-card__meta">
                                 {room.ruumitypp_label} · {room.hoone_name?.split('—')[0].trim()}
                             </div>
                             <div style={{ marginTop: '.5rem', display: 'flex', gap: '.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <span className="bron-stat-chip">👥 {room.kohti} kohta</span>
-                                {room.arvutikohti > 0 && <span className="bron-stat-chip">💻 {room.arvutikohti} arvutit</span>}
+                                <span className="bron-stat-chip">
+                                    <span className="material-icons" style={{ fontSize: '.9rem' }}>group</span>
+                                    {room.kohti} kohta
+                                </span>
+                                {room.arvutikohti > 0 && (
+                                    <span className="bron-stat-chip">
+                                        <span className="material-icons" style={{ fontSize: '.9rem' }}>computer</span>
+                                        {room.arvutikohti} arvutit
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="bron-room-card__footer">
                             <span className={`bron-badge ${room.vaba ? 'bron-badge--success' : 'bron-badge--danger'}`}>
-                                {room.vaba ? '✓ Vaba' : '✗ Hõivatud'}
+                                {room.vaba ? 'Vaba' : 'Hõivatud'}
                             </span>
                             <button
                                 className="bron-btn bron-btn-primary bron-btn-sm"
