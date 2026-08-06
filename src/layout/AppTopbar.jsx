@@ -1,123 +1,119 @@
-import { useState, useRef, useEffect } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { forwardRef } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Header } from '@TalTech-IT/styleguide';
 import { ROLE_LABELS, ROLES, useRole } from '../context/RoleContext';
 
-const ROLE_ICONS = {
-    [ROLES.GUEST]:  'person_off',
-    [ROLES.SUPER]:  'admin_panel_settings',
-    [ROLES.HALDUR]: 'manage_accounts',
-    [ROLES.UNI]:    'school',
-    [ROLES.EXT]:    'public',
-};
-const ROLE_ORDER = [ROLES.GUEST, ROLES.UNI, ROLES.EXT, ROLES.HALDUR, ROLES.SUPER];
+/**
+ * LinkBehaviour — CVI Header React Router integratsiooni adapter.
+ * Edastab href → to ja kasutab NavLink active class automaatikaga.
+ */
+const LinkBehaviour = forwardRef(function LinkBehaviour({ href, children, ...rest }, ref) {
+    if (!href || href.startsWith('http') || href.startsWith('//') || href.startsWith('mailto')) {
+        return <a href={href} ref={ref} {...rest}>{children}</a>;
+    }
+    return (
+        <NavLink
+            to={href}
+            ref={ref}
+            className={({ isActive }) => {
+                const base = rest.className || '';
+                return isActive ? `${base} tt-header__level2-link--active`.trim() : base;
+            }}
+            {...rest}
+        >
+            {children}
+        </NavLink>
+    );
+});
+
+// Demo rollid → CVI roles prop vajalikule kujule (number key)
+const DEMO_ROLES_MAP = [
+    { key: 0, label: 'Külastaja',       value: ROLES.GUEST },
+    { key: 1, label: 'Uni-ID kasutaja', value: ROLES.UNI },
+    { key: 2, label: 'Väline kasutaja', value: ROLES.EXT },
+    { key: 3, label: 'Ruumi haldur',    value: ROLES.HALDUR },
+    { key: 4, label: 'Superkasutaja',   value: ROLES.SUPER },
+];
+
+function roleKeyFor(roleValue) {
+    return DEMO_ROLES_MAP.find(r => r.value === roleValue)?.key ?? 0;
+}
 
 export default function AppTopbar() {
-    const { currentRole, currentRoleLabel, isLoggedIn, setRole,
+    const { currentRole, isLoggedIn, setRole,
             canSeeFullStatistics, canSeeOwnBookings, isExt } = useRole();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const menuRef = useRef(null);
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        if (!menuOpen) return;
-        function handle(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-        }
-        document.addEventListener('mousedown', handle);
-        return () => document.removeEventListener('mousedown', handle);
-    }, [menuOpen]);
+    // Navigatsioonilingid — role-aware
+    const navItems = [
+        { children: 'Otsi ruumi', href: '/otsi-ruumi' },
+        ...(canSeeOwnBookings ? [
+            { children: 'Broneeringud', href: '/broneeringud' },
+            { children: 'Taotlused',    href: '/taotlused' },
+        ] : []),
+        ...(isExt && !canSeeOwnBookings ? [
+            { children: 'Taotlused', href: '/taotlused' },
+        ] : []),
+        ...(canSeeFullStatistics ? [
+            { children: 'Statistika', href: '/statistika' },
+        ] : []),
+    ];
+
+    const links = [
+        {
+            active: true,
+            children: 'BRON',
+            href: '/',
+            items: navItems,
+        },
+        {
+            children: 'ÕIS',
+            href: 'https://ois2.ttu.ee',
+            target: '_blank',
+        },
+        {
+            children: 'Moodle',
+            href: 'https://moodle.taltech.ee',
+            target: '_blank',
+        },
+    ];
+
+    const rolesProps = {
+        activeRole: roleKeyFor(currentRole),
+        availableRoles: DEMO_ROLES_MAP.map(({ key, label }) => ({ key, label })),
+        onSelectRole: (key) => {
+            const found = DEMO_ROLES_MAP.find(r => r.key === key);
+            if (found) setRole(found.value);
+        },
+    };
+
+    const loginProps = isLoggedIn ? undefined : {
+        label: 'Logi sisse',
+        onClick: () => setRole(ROLES.UNI),
+    };
+
+    const profileProps = isLoggedIn ? {
+        profile: {
+            firstName: currentRole === ROLES.EXT ? 'Väline' : 'Demo',
+            lastName: ROLE_LABELS[currentRole],
+        },
+        onLogout: () => setRole(ROLES.GUEST),
+        links: canSeeOwnBookings ? [
+            { children: 'Minu broneeringud', href: '/broneeringud' },
+            { children: 'Minu taotlused',    href: '/taotlused' },
+        ] : [],
+    } : undefined;
 
     return (
-        <header>
-            {/* ── Pre-header: institutsioon + keel ── */}
-            <div className="bron-preheader">
-                <div className="bron-preheader__inner">
-                    <span className="bron-preheader__app-label">Tallinna Tehnikaülikool</span>
-                    <div className="bron-preheader__lang">
-                        <a href="#">EST</a><span>|</span><a href="#">ENG</a>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Main bar: logo + navigatsioon + rollid ── */}
-            <div className="bron-mainbar">
-                <div className="bron-mainbar__inner">
-                    {/* TAL TECH blokk-logo */}
-                    <Link to="/" className="bron-logo-block" aria-label="BRON avaleht">
-                        <span className="bron-logo-block__tal">TAL</span>
-                        <span className="bron-logo-block__tech">TECH</span>
-                    </Link>
-
-                    {/* Peamine navigatsioon — gradientalal */}
-                    <nav className="bron-topnav" aria-label="Peamine navigatsioon">
-                        <NavLink to="/otsi-ruumi"
-                            className={({ isActive }) => 'bron-topnav__link' + (isActive ? ' active' : '')}>
-                            Otsi ruumi
-                        </NavLink>
-                        {canSeeOwnBookings && <>
-                            <NavLink to="/broneeringud"
-                                className={({ isActive }) => 'bron-topnav__link' + (isActive ? ' active' : '')}>
-                                Broneeringud
-                            </NavLink>
-                            <NavLink to="/taotlused"
-                                className={({ isActive }) => 'bron-topnav__link' + (isActive ? ' active' : '')}>
-                                Taotlused
-                            </NavLink>
-                        </>}
-                        {isExt && !canSeeOwnBookings && (
-                            <NavLink to="/taotlused"
-                                className={({ isActive }) => 'bron-topnav__link' + (isActive ? ' active' : '')}>
-                                Taotlused
-                            </NavLink>
-                        )}
-                        {canSeeFullStatistics && (
-                            <NavLink to="/statistika"
-                                className={({ isActive }) => 'bron-topnav__link' + (isActive ? ' active' : '')}>
-                                Statistika
-                            </NavLink>
-                        )}
-                    </nav>
-
-                    {/* Parempool */}
-                    <div className="bron-topnav__right">
-                        {!isLoggedIn && (
-                            <button className="bron-login-btn" onClick={() => setRole(ROLES.UNI)}>
-                                <span className="material-icons" style={{ fontSize: '1rem' }}>login</span>
-                                Logi sisse
-                            </button>
-                        )}
-                        {/* Demo rolli-switcher */}
-                        <div className="bron-role-dropdown" ref={menuRef}>
-                            <button className="bron-role-pill"
-                                onClick={() => setMenuOpen(o => !o)}
-                                aria-expanded={menuOpen} aria-haspopup="menu">
-                                <span className="material-icons" style={{ fontSize: '1rem' }}>
-                                    {ROLE_ICONS[currentRole]}
-                                </span>
-                                {currentRoleLabel}
-                                <span className="material-icons" style={{ fontSize: '.9rem', opacity: .7 }}>
-                                    {menuOpen ? 'expand_less' : 'expand_more'}
-                                </span>
-                            </button>
-                            {menuOpen && (
-                                <div className="bron-role-menu" role="menu">
-                                    <div className="bron-role-menu__label">Demo — vaheta rolli</div>
-                                    {ROLE_ORDER.map(role => (
-                                        <button key={role}
-                                            className={`bron-role-menu__item${currentRole === role ? ' active' : ''}`}
-                                            onClick={() => { setRole(role); setMenuOpen(false); }}
-                                            role="menuitem">
-                                            <span className="material-icons" style={{ fontSize: '1.05rem' }}>
-                                                {ROLE_ICONS[role]}
-                                            </span>
-                                            {ROLE_LABELS[role]}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <Header
+            linkAs={LinkBehaviour}
+            links={links}
+            logoLink={{ href: '/', children: 'BRON — TalTech ruumibroneerimissüsteem' }}
+            skipLink={{ href: '#main-content', children: 'Liigu põhisisuni' }}
+            roles={rolesProps}
+            login={loginProps}
+            profile={profileProps}
+            slogan="Ruumibroneerimissüsteem"
+        />
     );
 }
