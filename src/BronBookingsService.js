@@ -1,0 +1,244 @@
+/**
+ * Konteksti-vaadete (Minu broneeringud, Minu taotlused, Otsi ruumi) mock andmed.
+ *
+ * Kasutab BronStatisticsService andmemudelit — filtreerib
+ * neid kasutaja rolli ja "minu" vaate jaoks.
+ */
+import { BRONEERINGU_STAATUS, BRONEERINGUD, RUUMID, RUUMITYYBID, SYNDMUSETYYBID } from './BronStatisticsService';
+
+/**
+ * "Minu" broneeringud — võtame lihtsalt mingi kindla alamhulga aktiivsetest ja lõppenud
+ * broneeringutest, et demol näidata mõistlikku listi.
+ */
+export function getMyBookings(role = 'UNI') {
+    // Näidise huvides valime iga 17. broneeringu — see annab ~200 broneeringut kokku,
+    // filtreerime alla ~15 tk isikliku vaate jaoks.
+    const mine = BRONEERINGUD.filter((b, i) => i % 17 === 3 && b.staatus !== BRONEERINGU_STAATUS.GHOST);
+
+    return mine
+        .slice(0, 15)
+        .map((b) => {
+            const ruum = RUUMID.find((r) => r.id === b.ruum_id);
+            return {
+                id: b.id,
+                ruum: ruum ? ruum.code : '—',
+                hoone: ruum ? ruum.hoone_name : '—',
+                ruumitypp_label: ruum ? ruum.ruumitypp_label : '—',
+                algus: b.algus,
+                lopp: b.lopp,
+                staatus: b.staatus,
+                syndmus_label: b.syndmus_label,
+                kestus_h: b.kestus_h
+            };
+        })
+        .sort((a, b) => (a.algus < b.algus ? 1 : -1));
+}
+
+/**
+ * "Minu" taotlused — ainult ghost/taotlus staatuses kirjed.
+ * Näitab, et tavakasutajal on menetlusel taotlused.
+ */
+export function getMyRequests(role = 'UNI') {
+    const requests = BRONEERINGUD.filter((b) => b.staatus === BRONEERINGU_STAATUS.GHOST);
+
+    return requests
+        .slice(0, 8)
+        .map((b, idx) => {
+            const ruum = RUUMID.find((r) => r.id === b.ruum_id);
+            const seisud = ['menetlusel', 'menetlusel', 'kinnitatud', 'tagasi_lykatud', 'tuhistatud'];
+            const seis = seisud[idx % seisud.length];
+            const esitatud = new Date(b.algus);
+            esitatud.setDate(esitatud.getDate() - 5 - idx);
+            return {
+                id: b.id,
+                ruum: ruum ? ruum.code : '—',
+                ruum_id: b.ruum_id,
+                hoone: ruum ? ruum.hoone_name : '—',
+                ruumitypp_label: ruum ? ruum.ruumitypp_label : '—',
+                algus: b.algus,
+                lopp: b.lopp,
+                seis,
+                syndmus_label: b.syndmus_label,
+                kestus_h: b.kestus_h,
+                pohjendus: role === 'EXT' ? 'Väline üritus — konverents "Rohepööre 2026"' : 'Uurimisgrupi koosolek',
+                esitatud: esitatud.toISOString(),
+                vastus_pohjendus: seis === 'tagasi_lykatud'
+                    ? 'Ruum on sel perioodil reserveeritud ülikooli üritusel. Palun vali muu aeg või ruum.'
+                    : null,
+                taotleja_nimi: role === 'EXT' ? 'Demo Kasutaja' : 'Demo Üliõpilane',
+                taotleja_email: role === 'EXT' ? 'demo@extern.ee' : 'demo@taltech.ee',
+                taotleja_org: role === 'EXT' ? 'Rohepööre OÜ' : 'TalTech — Infotehnoloogia teaduskond',
+                haldur_nimi: idx % 2 === 0 ? 'Mari Mägi' : 'Jaan Tamm',
+            };
+        })
+        .sort((a, b) => (a.algus < b.algus ? -1 : 1));
+}
+
+/**
+ * Kõik menetlusel taotlused haldurite jaoks — rikkalikum andmemudel.
+ */
+export function getAllRequests() {
+    const TAOTLEJAD = [
+        { nimi: 'Mart Saar', email: 'mart.saar@taltech.ee',     org: 'TalTech — IT teaduskond',      tyyp: 'uni' },
+        { nimi: 'Liisa Kask', email: 'liisa.kask@taltech.ee',  org: 'TalTech — Mehaanikateaduskond', tyyp: 'uni' },
+        { nimi: 'Peeter Oja', email: 'peeter@estartup.ee',     org: 'eStartup AS',                   tyyp: 'ext' },
+        { nimi: 'Anna Lepp',  email: 'anna.lepp@taltech.ee',   org: 'TalTech — Keemia instituut',    tyyp: 'uni' },
+        { nimi: 'Karl Vool',  email: 'karl@konverents.ee',     org: 'Konverentside OÜ',              tyyp: 'ext' },
+        { nimi: 'Eve Kivi',   email: 'eve.kivi@taltech.ee',    org: 'TalTech — Energeetika instituut',tyyp: 'uni' },
+        { nimi: 'Siim Tamm',  email: 'siim@ngo.org',          org: 'Eesti Noorteühing',              tyyp: 'ext' },
+        { nimi: 'Tiiu Mets',  email: 'tiiu.mets@taltech.ee',  org: 'TalTech — Sotsiaalteaduste kool',tyyp: 'uni' },
+        { nimi: 'Rain Pärn',  email: 'rain@rohe.ee',          org: 'Rohepööre OÜ',                  tyyp: 'ext' },
+        { nimi: 'Heli Nurm',  email: 'heli.nurm@taltech.ee',  org: 'TalTech — Matemaatika instituut',tyyp: 'uni' },
+    ];
+    const POHJENDUSED = [
+        'Uurimisgrupi iganädalane koosolek. Vajalik projektor ja tahvel.',
+        'Väliskonverentsi "Rohepööre 2026" ettevalmistusseminar.',
+        'Kaitsmiste eelne avalik esitlus magistritöödele.',
+        'Meeskonna hooajaline planeerimiskoosolek — 12 osalejat.',
+        'TalTech alumniürituse korraldusgrupi kohtumine.',
+        'Startup-ideede esitluspäev ettevõtluskeskusele.',
+        'Õpetamispraktika supervisioonigrupp — 8 õpetajaprakitkanti.',
+        'Rahvusvaheline teadusgrant KickOff — 15 osalejat erinevatest institutsioonidest.',
+        'Aastaaruande avalik esitlus toetajatele.',
+        'IT-turvalisuse workshop firmasisesele tiimile.',
+    ];
+    const SEISUD = ['menetlusel','menetlusel','menetlusel','kinnitatud','kinnitatud','tagasi_lykatud'];
+    const VASTUS_POHJ = [
+        null, null, null,
+        null,
+        null,
+        'Ruum on sel perioodil reserveeritud ülikooli eksamite tarbeks. Palun vali teine kuupäev.',
+    ];
+
+    const requests = BRONEERINGUD.filter((b) => b.staatus === BRONEERINGU_STAATUS.GHOST);
+
+    return requests.slice(0, 10).map((b, idx) => {
+        const ruum = RUUMID.find((r) => r.id === b.ruum_id);
+        const t = TAOTLEJAD[idx % TAOTLEJAD.length];
+        const seis = SEISUD[idx % SEISUD.length];
+        const esitatud = new Date(b.algus);
+        esitatud.setDate(esitatud.getDate() - 3 - (idx % 7));
+        return {
+            id: b.id,
+            ruum: ruum ? ruum.code : '—',
+            ruum_id: b.ruum_id,
+            hoone: ruum ? ruum.hoone_name : '—',
+            hoone_code: ruum ? ruum.hoone : '—',
+            ruumitypp_label: ruum ? ruum.ruumitypp_label : '—',
+            algus: b.algus,
+            lopp: b.lopp,
+            kestus_h: b.kestus_h,
+            seis,
+            syndmus_label: b.syndmus_label,
+            pohjendus: POHJENDUSED[idx % POHJENDUSED.length],
+            esitatud: esitatud.toISOString(),
+            vastus_pohjendus: VASTUS_POHJ[idx % SEISUD.length],
+            taotleja_nimi: t.nimi,
+            taotleja_email: t.email,
+            taotleja_org: t.org,
+            taotleja_tyyp: t.tyyp,
+        };
+    }).sort((a, b) => new Date(a.esitatud) - new Date(b.esitatud));
+}
+
+/**
+ * Ruumide otsingu mock. Filtreerib ruume otsinguparameetrite järgi.
+ * Iga ruumi juurde arvutame hetkel vaba/hõivatud staatuse ja järgmise vaba ajakoht.
+ */
+export function searchRooms(query = {}) {
+    let results = RUUMID.slice();
+
+    if (query.hoone && query.hoone.length > 0) {
+        results = results.filter((r) => query.hoone.includes(r.hoone));
+    }
+    if (query.ruumitypp && query.ruumitypp.length > 0) {
+        results = results.filter((r) => query.ruumitypp.includes(r.ruumitypp));
+    }
+    if (query.min_kohti) {
+        results = results.filter((r) => r.kohti >= query.min_kohti);
+    }
+    if (query.otsing) {
+        const q = query.otsing.toLowerCase();
+        results = results.filter((r) => r.code.toLowerCase().includes(q) || r.hoone_name.toLowerCase().includes(q));
+    }
+
+    // Omadused filter
+    if (query.omadused && query.omadused.length > 0) {
+        results = results.filter((r) =>
+            query.omadused.every((o) => {
+                if (o === 'arvutid')  return r.arvutikohti > 0;
+                if (o === 'labor')   return ['oppelabor', 'labor', 'teaduslabor'].includes(r.ruumitypp);
+                if (o === 'saun')    return r.ruumitypp === 'saun';
+                if (o === 'sport')   return r.ruumitypp === 'spordiruum';
+                if (o === 'tookoda') return r.ruumitypp === 'tookoda';
+                if (o === 'suur')    return r.kohti >= 200;
+                return true;
+            })
+        );
+    }
+
+    // Referentsi-aeg kättesaadavuse arvutamiseks
+    let now;
+    if (query.kuupaev && query.kellaaeg != null) {
+        const d = new Date(query.kuupaev);
+        d.setHours(0, query.kellaaeg, 0, 0); // kellaaeg on minutites alates 00:00
+        now = d;
+    } else if (query.kuupaev) {
+        const d = new Date(query.kuupaev);
+        d.setHours(10, 30, 0, 0);
+        now = d;
+    } else {
+        now = new Date('2026-08-03T10:30:00');
+    }
+
+    // Kestuse filter: eemalda ruumid kus soovitud ajavahemik on hõivatud
+    if (query.kuupaev && query.kellaaeg != null && query.kestus) {
+        const reqEnd = new Date(now.getTime() + query.kestus * 3600 * 1000);
+        results = results.filter((r) => {
+            return !BRONEERINGUD.some((b) => {
+                if (b.ruum_id !== r.id) return false;
+                if (b.staatus === 'tühistatud' || b.staatus === 'ghost') return false;
+                const bStart = new Date(b.algus);
+                const bEnd = new Date(b.lopp);
+                return bStart < reqEnd && bEnd > now;
+            });
+        });
+    }
+
+    return results.map((r) => {
+        const todayBookings = BRONEERINGUD.filter((b) => {
+            if (b.ruum_id !== r.id) return false;
+            if (b.staatus === 'tühistatud' || b.staatus === 'ghost') return false;
+            const algus = new Date(b.algus);
+            const lopp = new Date(b.lopp);
+            return algus.toDateString() === now.toDateString() && lopp > now;
+        }).sort((a, b) => new Date(a.algus) - new Date(b.algus));
+
+        const currentBooking = todayBookings.find((b) => new Date(b.algus) <= now && new Date(b.lopp) > now);
+        const nextBooking = todayBookings.find((b) => new Date(b.algus) > now);
+        const isBusy = !!currentBooking;
+
+        function fmtTime(iso) {
+            const d = new Date(iso);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        let hetkel_vaba_tekst;
+        if (isBusy) {
+            hetkel_vaba_tekst = `Hõivatud kuni ${fmtTime(currentBooking.lopp)}`;
+        } else if (nextBooking) {
+            hetkel_vaba_tekst = `Vaba kuni ${fmtTime(nextBooking.algus)}`;
+        } else {
+            hetkel_vaba_tekst = 'Vaba täna kuni 22:00';
+        }
+
+        return {
+            ...r,
+            vaba: !isBusy,
+            hetkel_vaba_tekst,
+            jargmine_vaba: isBusy ? (nextBooking ? fmtTime(nextBooking.algus) : null) : null
+        };
+    });
+}
+
+export { RUUMITYYBID, SYNDMUSETYYBID };
