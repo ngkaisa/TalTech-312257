@@ -14,7 +14,7 @@ import StatistikaRuumiDetail from './views/bron/StatistikaRuumiDetail';
 
 export default function App() {
     return (
-        <ConfigProvider theme="taltech">
+        <ConfigProvider theme="taltech" locale="et">
         <BrowserRouter>
             <RoleProvider>
                 <Routes>
