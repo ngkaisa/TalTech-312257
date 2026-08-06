@@ -24,7 +24,24 @@ const KORDUV_TYYP = [
     { value: 'monthly', label: 'Iga kuu' },
 ];
 
-const NADALAP = ['E', 'T', 'K', 'N', 'R', 'L', 'P'];
+// Ruumitüübid, kus uni-kasutaja peab esitama taotluse (mitte otsebroneering)
+// vt dokument § 4.2 — tabel 4
+const UNI_TAOTLUS_RUUMID = new Set([
+    'eriotstarbeline_auditoorium',
+    'aula',
+    'labor',
+    'teaduslabor',
+    'oppelabor',
+    'spordiruum',
+    'saun',
+    'tookoda',
+]);
+
+function vajabTaotlust({ isExt, isUni, isGuest }, ruumitypp) {
+    if (isExt || isGuest) return true;          // ext ja külastaja → alati taotlus
+    if (isUni) return UNI_TAOTLUS_RUUMID.has(ruumitypp); // uni → sõltub tüübist
+    return false;                               // super / haldur → otse
+}
 
 function addDays(dateStr, n) {
     const d = new Date(dateStr);
@@ -60,7 +77,7 @@ export default function BroneeringuVorm() {
     const { ruum_id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { isExt, isLoggedIn } = useRole();
+    const { isExt, isUni, isGuest, isLoggedIn } = useRole();
     const [submitted, setSubmitted] = useState(false);
 
     const prefill = location.state || {};
@@ -85,6 +102,9 @@ export default function BroneeringuVorm() {
     const occurrences = useMemo(() => generateOccurrences(form), [form]);
     const isRecurring = form.korduvus !== 'none';
 
+    const selectedRuumitypp = RUUMID.find(r => r.id === form.ruum_id)?.ruumitypp || '';
+    const needsTaotlus = vajabTaotlust({ isExt, isUni, isGuest }, selectedRuumitypp);
+
     function handleSubmit(e) {
         e.preventDefault();
         setSubmitted(true);
@@ -107,19 +127,19 @@ export default function BroneeringuVorm() {
                 <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 8, padding: '2rem', textAlign: 'center' }}>
                     <span className="material-icons" style={{ fontSize: '2.5rem', color: '#147a52', marginBottom: '.75rem', display: 'block' }}>check_circle</span>
                     <h2 style={{ color: '#065f46', margin: '0 0 .5rem' }}>
-                        {isExt ? 'Taotlus esitatud!' : isRecurring ? `${occurrences.length} broneeringut kinnitatud!` : 'Broneering kinnitatud!'}
+                        {needsTaotlus ? 'Taotlus esitatud!' : isRecurring ? `${occurrences.length} broneeringut kinnitatud!` : 'Broneering kinnitatud!'}
                     </h2>
                     <p style={{ color: '#047857', margin: '0 0 1.5rem' }}>
-                        {isExt
+                        {needsTaotlus
                             ? 'Sinu taotlus on saadetud ruumihaldurile menetlemiseks.'
                             : isRecurring
                             ? `Korduvad broneeringud on edukalt registreeritud (${occurrences.length} korda).`
                             : 'Broneering on edukalt registreeritud.'}
                     </p>
                     <div style={{ display: 'flex', gap: '.75rem', justifyContent: 'center' }}>
-                        <button className="bron-btn bron-btn-primary" onClick={() => navigate('/broneeringud')}>
-                            <span className="material-icons" style={{ fontSize: '1rem' }}>event</span>
-                            Vaata broneeringuid
+                        <button className="bron-btn bron-btn-primary" onClick={() => navigate(needsTaotlus ? '/taotlused' : '/broneeringud')}>
+                            <span className="material-icons" style={{ fontSize: '1rem' }}>{needsTaotlus ? 'inbox' : 'event'}</span>
+                            {needsTaotlus ? 'Vaata taotlusi' : 'Vaata broneeringuid'}
                         </button>
                         <button className="bron-btn bron-btn-secondary" onClick={() => setSubmitted(false)}>Uus broneering</button>
                     </div>
@@ -138,12 +158,12 @@ export default function BroneeringuVorm() {
             <BronBreadcrumbs items={[
                 { label: 'Avaleht', to: '/' },
                 { label: 'Otsi ruumi', to: '/otsi-ruumi' },
-                { label: isExt ? 'Uus taotlus' : 'Uus broneering' }
+                { label: needsTaotlus ? 'Uus taotlus' : 'Uus broneering' }
             ]} />
             <div className="bron-page-header">
                 <div>
-                    <h1>{isExt ? 'Esita taotlus' : 'Uus broneering'}</h1>
-                    <p>{isExt ? 'Täida taotlusvorm — haldur kinnitab selle käsitsi.' : 'Broneeri ruum ülikoolihoonetes.'}</p>
+                    <h1>{needsTaotlus ? 'Esita taotlus' : 'Uus broneering'}</h1>
+                    <p>{needsTaotlus ? 'Täida taotlusvorm — haldur kinnitab selle käsitsi.' : 'Broneeri ruum ülikoolihoonetes.'}</p>
                 </div>
             </div>
 
@@ -211,14 +231,22 @@ export default function BroneeringuVorm() {
                         </div>
                     </div>
 
-                    {isExt && (
-                        <div className="bron-form-group" style={{ marginTop: '1rem' }}>
-                            <label>Põhjendus / sündmuse kirjeldus *</label>
-                            <textarea rows={3} value={form.pohjendus}
-                                onChange={e => set('pohjendus', e.target.value)}
-                                placeholder="Kirjelda üritust või kasutuse eesmärki..."
-                                required style={{ resize: 'vertical' }} />
-                        </div>
+                    {needsTaotlus && (
+                        <>
+                            <div className="bron-form-group" style={{ marginTop: '1rem' }}>
+                                <label>Põhjendus / sündmuse kirjeldus *</label>
+                                <textarea rows={3} value={form.pohjendus}
+                                    onChange={e => set('pohjendus', e.target.value)}
+                                    placeholder="Kirjelda üritust või kasutuse eesmärki..."
+                                    required style={{ resize: 'vertical' }} />
+                            </div>
+                            {isUni && selectedRuumitypp && (
+                                <div style={{ marginTop: '.75rem', display: 'flex', alignItems: 'flex-start', gap: '.5rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '.6rem .8rem', fontSize: '.82rem', color: '#92400e' }}>
+                                    <span className="material-icons" style={{ fontSize: '1rem', marginTop: '1px' }}>info</span>
+                                    <span>See ruumitüüp nõuab halduri kinnitust. Sinu taotlus jõustub broneeringuna pärast ruumihalduri heakskiitu.</span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -268,7 +296,10 @@ export default function BroneeringuVorm() {
                     {/* Preview */}
                     <div style={{ background: 'var(--tt-purple-100)', borderRadius: 6, padding: '1rem' }}>
                         <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--tt-purple-500)', marginBottom: '.5rem', textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                            {isRecurring ? `Luuakse ${occurrences.length} broneeringut` : 'Luuakse 1 broneering'} · {fmtMin(startMin)}–{fmtMin(endMin)}
+                            {needsTaotlus
+                            ? isRecurring ? `Esitatakse ${occurrences.length} taotlust` : 'Esitatakse 1 taotlus'
+                            : isRecurring ? `Luuakse ${occurrences.length} broneeringut` : 'Luuakse 1 broneering'
+                        } · {fmtMin(startMin)}–{fmtMin(endMin)}
                         </div>
                         <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
                             {occurrences.slice(0, 20).map((d, i) => (
@@ -288,9 +319,12 @@ export default function BroneeringuVorm() {
                 <div style={{ display: 'flex', gap: '.75rem' }}>
                     <button type="submit" className="bron-btn bron-btn-primary">
                         <span className="material-icons" style={{ fontSize: '1rem' }}>
-                            {isExt ? 'send' : 'check'}
+                            {needsTaotlus ? 'send' : 'check'}
                         </span>
-                        {isExt ? 'Esita taotlus' : isRecurring ? `Kinnita ${occurrences.length} broneeringut` : 'Kinnita broneering'}
+                        {needsTaotlus
+                            ? isRecurring ? `Esita ${occurrences.length} taotlust` : 'Esita taotlus'
+                            : isRecurring ? `Kinnita ${occurrences.length} broneeringut` : 'Kinnita broneering'
+                        }
                     </button>
                     <button type="button" className="bron-btn bron-btn-secondary" onClick={() => navigate(-1)}>
                         Katkesta
