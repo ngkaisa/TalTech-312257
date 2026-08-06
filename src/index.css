@@ -711,6 +711,12 @@ a { color: inherit; }
   flex-wrap: wrap;
   align-items: flex-end;
 }
+.bron-search-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
 
 /* ══════════════════════════════════════════════════════════════════
    QUICK ACTION CARDS (avaleht)

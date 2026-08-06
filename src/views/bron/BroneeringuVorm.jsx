@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RUUMID, SYNDMUSETYYBID } from '../../BronStatisticsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import { useRole } from '../../context/RoleContext';
@@ -59,23 +59,24 @@ function fmtDate(iso) {
 export default function BroneeringuVorm() {
     const { ruum_id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { isExt, isLoggedIn } = useRole();
     const [submitted, setSubmitted] = useState(false);
 
+    const prefill = location.state || {};
     const defaultRoom = ruum_id ? RUUMID.find(r => r.id === ruum_id) : null;
 
     const [form, setForm] = useState({
         ruum_id: defaultRoom?.id || '',
-        kuupaev: '2026-08-10',
-        kellaaeg: 540,
-        kestus: 2,
+        kuupaev: prefill.kuupaev || '2026-08-10',
+        kellaaeg: prefill.kellaaeg !== undefined ? prefill.kellaaeg : 540,
+        kestus: prefill.kestus !== undefined ? prefill.kestus : 2,
         syndmus: 'oppe_teadus',
         pohjendus: '',
         osalejate_arv: '',
-        // Korduvus
-        korduvus: 'none',
-        korduvus_lopp_tyyp: 'count', // 'count' | 'date'
-        korduvus_arv: '5',
+        korduvus: prefill.korduvus || 'none',
+        korduvus_lopp_tyyp: 'count',
+        korduvus_arv: prefill.korduvus_arv || '5',
         korduvus_lopp: '2026-12-31',
     });
 
@@ -145,6 +146,13 @@ export default function BroneeringuVorm() {
                     <p>{isExt ? 'Täida taotlusvorm — haldur kinnitab selle käsitsi.' : 'Broneeri ruum ülikoolihoonetes.'}</p>
                 </div>
             </div>
+
+            {prefill.kuupaev && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', background: 'var(--tt-purple-100)', borderRadius: 8, padding: '.6rem 1rem', marginBottom: '1rem', fontSize: '.85rem', color: 'var(--tt-purple-500)' }}>
+                    <span className="material-icons" style={{ fontSize: '1rem' }}>search</span>
+                    Eeltäidetud otsinguparameetritest — kontrolli andmed ja kinnita broneering.
+                </div>
+            )}
 
             <form onSubmit={handleSubmit}>
                 {/* ── Põhiandmed ── */}
