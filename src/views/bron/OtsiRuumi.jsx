@@ -1,3 +1,4 @@
+import { Badge, StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchRooms } from '../../BronBookingsService';
@@ -132,15 +133,14 @@ export default function OtsiRuumi() {
                         </select>
                     </div>
                     <div style={{ paddingBottom: '2px' }}>
-                        <button
+                        <TTNewButton
                             type="button"
-                            className={`bron-btn bron-btn-sm ${search.korduv ? 'bron-btn-primary' : 'bron-btn-secondary'}`}
+                            variant={search.korduv ? 'primary' : 'outline'}
+                            size="sm"
                             onClick={() => setS('korduv', !search.korduv)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '.35rem' }}
                         >
-                            <span className="material-icons" style={{ fontSize: '1rem' }}>repeat</span>
                             Korduv
-                        </button>
+                        </TTNewButton>
                     </div>
                 </div>
 
@@ -170,9 +170,9 @@ export default function OtsiRuumi() {
                                 Otsin ruume, mis on vabad {searchDates.length}× ({fmtMins(search.kellaaeg)}–{fmtMins(endMin)}):
                             </span>
                             {searchDates.slice(0, 8).map(d => (
-                                <span key={d} className="bron-badge bron-badge--neutral" style={{ fontSize: '.72rem', marginRight: '.25rem' }}>
+                                <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem', marginRight: '.25rem' }}>
                                     {new Date(d).toLocaleDateString('et-EE', { day: '2-digit', month: '2-digit' })}
-                                </span>
+                                </Badge>
                             ))}
                             {searchDates.length > 8 && (
                                 <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>+{searchDates.length - 8} veel</span>
@@ -208,11 +208,13 @@ export default function OtsiRuumi() {
                         <input type="text" placeholder="Ruumi kood..." value={filters.otsing}
                             onChange={e => setF('otsing', e.target.value)} />
                     </div>
-                    <button className="bron-btn bron-btn-secondary bron-btn-sm"
+                    <TTNewButton
+                        variant="outline"
+                        size="sm"
                         style={{ alignSelf: 'flex-end' }}
                         onClick={() => setFilters({ hoone: '', ruumitypp: '', min_kohti: '', otsing: '' })}>
                         Tühjenda
-                    </button>
+                    </TTNewButton>
                 </div>
             </div>
 
@@ -238,23 +240,23 @@ export default function OtsiRuumi() {
                                     </span>
                                 )}
                                 {search.korduv && (
-                                    <span className="bron-badge bron-badge--success" style={{ fontSize: '.72rem' }}>
-                                        <span className="material-icons" style={{ fontSize: '.75rem' }}>repeat</span>
+                                    <Badge color="purple" size="sm" style={{ fontSize: '.72rem' }}>
                                         Saadaval {searchDates.length}×
-                                    </span>
+                                    </Badge>
                                 )}
                             </div>
                         </div>
                         <div className="bron-room-card__footer">
-                            <span className={`bron-badge ${room.vaba ? 'bron-badge--success' : 'bron-badge--danger'}`}>
+                            <StatusTag type={room.vaba ? 'success' : 'danger'}>
                                 {room.vaba ? 'Vaba' : 'Hõivatud'}
-                            </span>
-                            <button
-                                className="bron-btn bron-btn-primary bron-btn-sm"
+                            </StatusTag>
+                            <TTNewButton
+                                variant="primary"
+                                size="sm"
                                 onClick={e => handleBroneeri(e, room.id)}
                             >
                                 Broneeri
-                            </button>
+                            </TTNewButton>
                         </div>
                     </div>
                 ))}

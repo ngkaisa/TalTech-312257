@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* Inter eemaldatud — CVI kasutab ProximaNova fonti (node_modules/@taltech-it/styleguide/fonts/) */
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 :root {
@@ -41,10 +41,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 body {
   background: var(--tt-bg);
-  margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* font-family: CVI --bs-body-font-family (ProximaNova) */
   color: var(--tt-text);
-  font-size: 15px;
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; }

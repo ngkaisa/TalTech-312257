@@ -1,3 +1,4 @@
+import { Tabs, TabPanel } from '@TalTech-IT/styleguide';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { defaultPeriod, getGlobalCounts } from '../../BronStatisticsService';
@@ -81,15 +82,18 @@ export default function StatistikaLeht() {
 
             <StatistikaFilter filters={filters} onChange={setFilters} />
 
-            <div className="bron-tabs">
+            <Tabs
+                id="statistika-tabs"
+                labels={TAB_KEYS.map(t => TAB_LABELS[t])}
+                selectedIndex={TAB_KEYS.indexOf(activeTab)}
+                onSelect={(i) => switchTab(TAB_KEYS[i])}
+            >
                 {TAB_KEYS.map(t => (
-                    <button key={t} className={`bron-tab ${activeTab === t ? 'active' : ''}`} onClick={() => switchTab(t)}>
-                        {TAB_LABELS[t]}
-                    </button>
+                    <TabPanel key={t}>
+                        {tabContent[t]}
+                    </TabPanel>
                 ))}
-            </div>
-
-            {tabContent[activeTab]}
+            </Tabs>
         </div>
     );
 }

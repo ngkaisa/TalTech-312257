@@ -1,4 +1,6 @@
+import { Badge, StatusTag, Tabs, TabPanel, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
 import StaatusKaart from '../../components/bron/StaatusKaart';
@@ -30,49 +32,79 @@ export default function MinuBroneeringud() {
                     <h1>Minu broneeringud</h1>
                     <p>Sinu kinnitatud broneeringud. Vali „Tühista", et vabastada aeg teistele kasutajatele.</p>
                 </div>
-                <a href="/otsi-ruumi" className="bron-btn bron-btn-primary">+ Uus broneering</a>
+                <TTNewButton as={Link} to="/otsi-ruumi" variant="primary">+ Uus broneering</TTNewButton>
             </div>
 
-            <div className="bron-tabs">
-                <button className={`bron-tab ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>
-                    Tulevased <span className="bron-badge bron-badge--neutral" style={{ marginLeft: '.4rem' }}>{upcoming.length}</span>
-                </button>
-                <button className={`bron-tab ${activeTab === 'past' ? 'active' : ''}`} onClick={() => setActiveTab('past')}>
-                    Ajalugu <span className="bron-badge bron-badge--neutral" style={{ marginLeft: '.4rem' }}>{past.length}</span>
-                </button>
-            </div>
-
-            {shown.length === 0
-                ? <div className="bron-empty"><h3>Broneeringuid pole</h3></div>
-                : (
-                    <div className="bron-table-wrap">
-                        <table className="bron-table">
-                            <thead>
-                                <tr><th>Ruum</th><th>Hoone</th><th>Algus</th><th>Lõpp</th><th>Sündmus</th><th>Staatus</th><th></th></tr>
-                            </thead>
-                            <tbody>
-                                {shown.map(b => (
-                                    <tr key={b.id}>
-                                        <td><strong>{b.ruum}</strong></td>
-                                        <td style={{ fontSize: '.8rem', color: '#6b7280' }}>{b.hoone}</td>
-                                        <td>{fmt(b.algus)}</td>
-                                        <td>{fmt(b.lopp)}</td>
-                                        <td>{b.syndmus_label}</td>
-                                        <td><StaatusKaart staatus={b.staatus} /></td>
-                                        <td>
-                                            {activeTab === 'upcoming' && b.staatus !== 'tühistatud' && (
-                                                cancelledId === b.id
-                                                    ? <span className="bron-badge bron-badge--success">✓ Tühistatud</span>
-                                                    : <button className="bron-btn bron-btn-danger bron-btn-sm" onClick={() => setCancelledId(b.id)}>Tühista</button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )
-            }
+            <Tabs
+                id="minu-broneeringud-tabs"
+                labels={[
+                    <span>Tulevased <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{upcoming.length}</Badge></span>,
+                    <span>Ajalugu <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{past.length}</Badge></span>
+                ]}
+                selectedIndex={activeTab === 'upcoming' ? 0 : 1}
+                onSelect={(i) => setActiveTab(i === 0 ? 'upcoming' : 'past')}
+            >
+                <TabPanel>
+                {shown.length === 0
+                    ? <div className="bron-empty"><h3>Broneeringuid pole</h3></div>
+                    : (
+                        <div className="bron-table-wrap">
+                            <table className="table table-hover">
+                                <thead>
+                                    <tr><th>Ruum</th><th>Hoone</th><th>Algus</th><th>Lõpp</th><th>Sündmus</th><th>Staatus</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    {shown.map(b => (
+                                        <tr key={b.id}>
+                                            <td><strong>{b.ruum}</strong></td>
+                                            <td style={{ fontSize: '.8rem', color: '#6b7280' }}>{b.hoone}</td>
+                                            <td>{fmt(b.algus)}</td>
+                                            <td>{fmt(b.lopp)}</td>
+                                            <td>{b.syndmus_label}</td>
+                                            <td><StaatusKaart staatus={b.staatus} /></td>
+                                            <td>
+                                                {activeTab === 'upcoming' && b.staatus !== 'tühistatud' && (
+                                                    cancelledId === b.id
+                                                        ? <StatusTag type="success">✓ Tühistatud</StatusTag>
+                                                        : <TTNewButton variant="danger" size="sm" onClick={() => setCancelledId(b.id)}>Tühista</TTNewButton>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
+                </TabPanel>
+                <TabPanel>
+                {shown.length === 0
+                    ? <div className="bron-empty"><h3>Broneeringuid pole</h3></div>
+                    : (
+                        <div className="bron-table-wrap">
+                            <table className="table table-hover">
+                                <thead>
+                                    <tr><th>Ruum</th><th>Hoone</th><th>Algus</th><th>Lõpp</th><th>Sündmus</th><th>Staatus</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    {shown.map(b => (
+                                        <tr key={b.id}>
+                                            <td><strong>{b.ruum}</strong></td>
+                                            <td style={{ fontSize: '.8rem', color: '#6b7280' }}>{b.hoone}</td>
+                                            <td>{fmt(b.algus)}</td>
+                                            <td>{fmt(b.lopp)}</td>
+                                            <td>{b.syndmus_label}</td>
+                                            <td><StaatusKaart staatus={b.staatus} /></td>
+                                            <td></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
+                </TabPanel>
+            </Tabs>
         </div>
     );
 }

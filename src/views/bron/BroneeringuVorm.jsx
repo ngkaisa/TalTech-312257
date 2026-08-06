@@ -1,3 +1,4 @@
+import { Badge, StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RUUMID, SYNDMUSETYYBID } from '../../BronStatisticsService';
@@ -137,11 +138,10 @@ export default function BroneeringuVorm() {
                             : 'Broneering on edukalt registreeritud.'}
                     </p>
                     <div style={{ display: 'flex', gap: '.75rem', justifyContent: 'center' }}>
-                        <button className="bron-btn bron-btn-primary" onClick={() => navigate(needsTaotlus ? '/taotlused' : '/broneeringud')}>
-                            <span className="material-icons" style={{ fontSize: '1rem' }}>{needsTaotlus ? 'inbox' : 'event'}</span>
+                        <TTNewButton variant="primary" onClick={() => navigate(needsTaotlus ? '/taotlused' : '/broneeringud')}>
                             {needsTaotlus ? 'Vaata taotlusi' : 'Vaata broneeringuid'}
-                        </button>
-                        <button className="bron-btn bron-btn-secondary" onClick={() => setSubmitted(false)}>Uus broneering</button>
+                        </TTNewButton>
+                        <TTNewButton variant="outline" onClick={() => setSubmitted(false)}>Uus broneering</TTNewButton>
                     </div>
                 </div>
             </div>
@@ -259,11 +259,12 @@ export default function BroneeringuVorm() {
 
                     <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                         {KORDUV_TYYP.map(t => (
-                            <button key={t.value} type="button"
-                                className={`bron-btn bron-btn-sm ${form.korduvus === t.value ? 'bron-btn-primary' : 'bron-btn-secondary'}`}
+                            <TTNewButton key={t.value} type="button"
+                                variant={form.korduvus === t.value ? 'primary' : 'outline'}
+                                size="sm"
                                 onClick={() => set('korduvus', t.value)}>
                                 {t.label}
-                            </button>
+                            </TTNewButton>
                         ))}
                     </div>
 
@@ -303,32 +304,29 @@ export default function BroneeringuVorm() {
                         </div>
                         <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
                             {occurrences.slice(0, 20).map((d, i) => (
-                                <span key={d} className="bron-badge bron-badge--neutral" style={{ fontSize: '.72rem' }}>
+                                <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem' }}>
                                     {fmtDate(d)}
-                                </span>
+                                </Badge>
                             ))}
                             {occurrences.length > 20 && (
-                                <span className="bron-badge bron-badge--neutral" style={{ fontSize: '.72rem' }}>
+                                <Badge color="purple" size="sm" style={{ fontSize: '.72rem' }}>
                                     +{occurrences.length - 20} veel
-                                </span>
+                                </Badge>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '.75rem' }}>
-                    <button type="submit" className="bron-btn bron-btn-primary">
-                        <span className="material-icons" style={{ fontSize: '1rem' }}>
-                            {needsTaotlus ? 'send' : 'check'}
-                        </span>
+                    <TTNewButton type="submit" variant="primary">
                         {needsTaotlus
                             ? isRecurring ? `Esita ${occurrences.length} taotlust` : 'Esita taotlus'
                             : isRecurring ? `Kinnita ${occurrences.length} broneeringut` : 'Kinnita broneering'
                         }
-                    </button>
-                    <button type="button" className="bron-btn bron-btn-secondary" onClick={() => navigate(-1)}>
+                    </TTNewButton>
+                    <TTNewButton type="button" variant="outline" onClick={() => navigate(-1)}>
                         Katkesta
-                    </button>
+                    </TTNewButton>
                 </div>
             </form>
         </div>
