@@ -1,4 +1,4 @@
-import { Badge, StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
+import { Badge, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RUUMID, SYNDMUSETYYBID } from '../../BronStatisticsService';

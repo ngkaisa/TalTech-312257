@@ -1,4 +1,4 @@
-import { Tabs, TabPanel } from '@TalTech-IT/styleguide';
+import { TabPanel, Tabs } from '@TalTech-IT/styleguide';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { defaultPeriod, getGlobalCounts } from '../../BronStatisticsService';

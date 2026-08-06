@@ -247,9 +247,14 @@ export default function OtsiRuumi() {
                             </div>
                         </div>
                         <div className="bron-room-card__footer">
-                            <StatusTag type={room.vaba ? 'success' : 'danger'}>
-                                {room.vaba ? 'Vaba' : 'Hõivatud'}
-                            </StatusTag>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+                                <StatusTag type={room.vaba ? 'success' : 'danger'}>
+                                    {room.vaba ? 'Vaba' : 'Hõivatud'}
+                                </StatusTag>
+                                <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>
+                                    {room.hetkel_vaba_tekst}
+                                </span>
+                            </div>
                             <TTNewButton
                                 variant="primary"
                                 size="sm"

@@ -241,4 +241,142 @@ export function searchRooms(query = {}) {
     });
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Kontaktisikud mock — kasutame RuumiDetail kontaktvaates
+// ─────────────────────────────────────────────────────────────────
+const KASUTAJAD_FULL = [
+    { nimi: 'Mart Saar',   email: 'mart.saar@taltech.ee',    telefon: '+372 5123 4567', org: 'TalTech — IT teaduskond',           tyyp: 'uni' },
+    { nimi: 'Liisa Kask',  email: 'liisa.kask@taltech.ee',   telefon: '+372 5234 5678', org: 'TalTech — Mehaanikateaduskond',      tyyp: 'uni' },
+    { nimi: 'Peeter Oja',  email: 'peeter@estartup.ee',      telefon: '+372 5345 6789', org: 'eStartup AS',                        tyyp: 'ext' },
+    { nimi: 'Anna Lepp',   email: 'anna.lepp@taltech.ee',    telefon: '+372 5456 7890', org: 'TalTech — Keemia instituut',         tyyp: 'uni' },
+    { nimi: 'Karl Vool',   email: 'karl@konverents.ee',      telefon: '+372 5567 8901', org: 'Konverentside OÜ',                   tyyp: 'ext' },
+    { nimi: 'Eve Kivi',    email: 'eve.kivi@taltech.ee',     telefon: '+372 5678 9012', org: 'TalTech — Energeetika instituut',    tyyp: 'uni' },
+    { nimi: 'Siim Tamm',   email: 'siim@ngo.org',            telefon: '+372 5789 0123', org: 'Eesti Noorteühing',                  tyyp: 'ext' },
+    { nimi: 'Tiiu Mets',   email: 'tiiu.mets@taltech.ee',    telefon: '+372 5890 1234', org: 'TalTech — Sotsiaalteaduste kool',   tyyp: 'uni' },
+    { nimi: 'Rain Pärn',   email: 'rain@rohe.ee',            telefon: '+372 5901 2345', org: 'Rohepööre OÜ',                       tyyp: 'ext' },
+    { nimi: 'Heli Nurm',   email: 'heli.nurm@taltech.ee',    telefon: '+372 5012 3456', org: 'TalTech — Matemaatika instituut',   tyyp: 'uni' },
+];
+
+// Referentsaeg kättesaadavuse arvutamiseks (sama mis searchRooms kasutab)
+const NOW_REF = new Date('2026-08-06T10:30:00');
+
+/**
+ * Arvutab ruumi hetkelise kättesaadavuse.
+ * Tagastab { vaba, hetkel_vaba_tekst, currentBooking, nextBooking }
+ */
+export function getRoomAvailability(ruum_id) {
+    function fmtTime(iso) {
+        const d = new Date(iso);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    const today = NOW_REF.toDateString();
+    const todayBookings = BRONEERINGUD.filter(b => {
+        if (b.ruum_id !== ruum_id) return false;
+        if (b.staatus === 'tühistatud' || b.staatus === BRONEERINGU_STAATUS.GHOST) return false;
+        const lopp = new Date(b.lopp);
+        return new Date(b.algus).toDateString() === today && lopp > NOW_REF;
+    }).sort((a, b) => new Date(a.algus) - new Date(b.algus));
+
+    const currentBooking = todayBookings.find(b => new Date(b.algus) <= NOW_REF && new Date(b.lopp) > NOW_REF);
+    const nextBooking    = todayBookings.find(b => new Date(b.algus) > NOW_REF);
+    const isBusy = !!currentBooking;
+
+    let hetkel_vaba_tekst;
+    if (isBusy)            hetkel_vaba_tekst = `Hõivatud kuni ${fmtTime(currentBooking.lopp)}`;
+    else if (nextBooking)  hetkel_vaba_tekst = `Vaba kuni ${fmtTime(nextBooking.algus)}`;
+    else                   hetkel_vaba_tekst = 'Vaba täna kuni 22:00';
+
+    return { vaba: !isBusy, hetkel_vaba_tekst, currentBooking, nextBooking };
+}
+
+/**
+ * Tänase + homme broneeringud koos broneerija kontaktandmetega.
+ * Nähtav ainult super/haldur rolliga kasutajatele.
+ */
+export function getRoomScheduleWithContacts(ruum_id) {
+    function fmtTime(iso) {
+        const d = new Date(iso);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    const cutoff = new Date(NOW_REF);
+    cutoff.setDate(cutoff.getDate() + 2); // kuni 2 päeva ette
+
+    const bookings = BRONEERINGUD.filter(b => {
+        if (b.ruum_id !== ruum_id) return false;
+        if (b.staatus === 'tühistatud') return false;
+        const algus = new Date(b.algus);
+        return algus >= new Date(NOW_REF.toDateString()) && algus < cutoff;
+    }).sort((a, b) => new Date(a.algus) - new Date(b.algus));
+
+    return bookings.slice(0, 12).map((b, i) => {
+        const k = KASUTAJAD_FULL[i % KASUTAJAD_FULL.length];
+        return {
+            ...b,
+            broneerija_nimi:    k.nimi,
+            broneerija_email:   k.email,
+            broneerija_telefon: k.telefon,
+            broneerija_org:     k.org,
+            broneerija_tyyp:    k.tyyp,
+            algus_fmt: fmtTime(b.algus),
+            lopp_fmt:  fmtTime(b.lopp),
+            paev: new Date(b.algus).toLocaleDateString('et-EE', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+        };
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Ruumi tagasiside mock andmed
+// ─────────────────────────────────────────────────────────────────
+const TAGASISIDE_KOMMENTAARID = [
+    'Kliimaseade käis liiga valjult, segab töötamist.',
+    'Ruum oli väga puhas ja korras!',
+    'Valgustus pisut nõrk. Muus osas kõik hästi.',
+    'Tundus, et eelmine kasutaja oli laua laiali jätnud — palun tuletada meelde korda.',
+    'Suurepärane ruum! Sobib hästi väikestele seminaridele.',
+    'Akna all tuli külm tuulõhk, korrigeerida.',
+    'Projektori kaabel oli katki, vajas asendamist.',
+    'Puhas ja vaikne. Täpselt selline nagu vaja.',
+    'Lõhn ruumis oli veidi tuhkne — ehk tuulutada rohkem.',
+];
+
+function makeFeedbackSeed(ruum_id) {
+    return ruum_id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+}
+
+function pseudoRand(seed, i) {
+    const x = Math.sin(seed + i * 127.1) * 43758.5453;
+    return x - Math.floor(x);
+}
+
+function randInt(seed, i, min, max) {
+    return Math.floor(pseudoRand(seed, i) * (max - min + 1)) + min;
+}
+
+/**
+ * Genereerib mock tagasiside antud ruumile.
+ * Tagastab kuni 8 tagasiside kirjet.
+ */
+export function getRoomFeedback(ruum_id) {
+    const seed = makeFeedbackSeed(ruum_id);
+    const count = 3 + (seed % 5); // 3–7 tagasiside kirjet
+    const KASUTAJAD_FEEDBACK = [
+        'M. Saar', 'L. Kask', 'P. Oja', 'A. Lepp', 'K. Vool',
+        'E. Kivi', 'S. Tamm', 'T. Mets', 'R. Pärn', 'H. Nurm',
+    ];
+    return Array.from({ length: count }, (_, i) => ({
+        id: `TG_${ruum_id}_${i}`,
+        ruum_id,
+        kasutaja: KASUTAJAD_FEEDBACK[(seed + i) % KASUTAJAD_FEEDBACK.length],
+        kuupaev: new Date(NOW_REF.getTime() - (1 + i) * 86400000 * randInt(seed, i * 3, 1, 5))
+            .toISOString().slice(0, 10),
+        temperatuur: randInt(seed, i * 7 + 1, 2, 5),
+        puhtus:      randInt(seed, i * 7 + 2, 2, 5),
+        ohk:         randInt(seed, i * 7 + 3, 1, 5),
+        varustus:    randInt(seed, i * 7 + 4, 2, 5),
+        kommentaar:  pseudoRand(seed, i * 7 + 5) > 0.45
+            ? TAGASISIDE_KOMMENTAARID[(seed + i) % TAGASISIDE_KOMMENTAARID.length]
+            : null,
+    })).sort((a, b) => b.kuupaev.localeCompare(a.kuupaev));
+}
+
 export { RUUMITYYBID, SYNDMUSETYYBID };
