@@ -7,6 +7,82 @@ import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
 import StaatusKaart from '../../components/bron/StaatusKaart';
 import { useRole } from '../../context/RoleContext';
 
+const TYHIST_POHJUSED = [
+    'Üritus jäi ära',
+    'Kuupäev muutus',
+    'Leidsin sobivama ruumi',
+    'Osalejate arv muutus',
+    'Tehniline viga broneerimisel',
+    'Muu',
+];
+
+function TyhistamineModaal({ broneering, onKinnita, onSulge }) {
+    const [liik, setLiik] = useState('');
+    const [kommentaar, setKommentaar] = useState('');
+    const kehtiv = liik !== '' && kommentaar.trim().length >= 5;
+
+    function submit(e) {
+        e.preventDefault();
+        if (!kehtiv) return;
+        onKinnita({ id: broneering.id, liik, kommentaar: kommentaar.trim() });
+    }
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '1rem',
+        }} onClick={onSulge}>
+            <div style={{
+                background: '#fff', borderRadius: 10, padding: '1.75rem',
+                width: '100%', maxWidth: 480, boxShadow: '0 8px 32px rgba(52,43,96,.18)',
+            }} onClick={e => e.stopPropagation()}>
+                <h2 style={{ margin: '0 0 .3rem', fontSize: '1.1rem', color: 'var(--tt-purple-500)' }}>
+                    Tühista broneering
+                </h2>
+                <p style={{ margin: '0 0 1.25rem', fontSize: '.85rem', color: 'var(--tt-text-muted)' }}>
+                    <strong>{broneering.ruum}</strong> · {new Date(broneering.algus).toLocaleString('et-EE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+                <form onSubmit={submit}>
+                    <div className="bron-form-group" style={{ marginBottom: '1rem' }}>
+                        <label>Tühistamise põhjus *</label>
+                        <select value={liik} onChange={e => setLiik(e.target.value)} required>
+                            <option value="">Vali põhjus...</option>
+                            {TYHIST_POHJUSED.map(p => (
+                                <option key={p} value={p}>{p}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="bron-form-group" style={{ marginBottom: '1.25rem' }}>
+                        <label>Kommentaar *</label>
+                        <textarea
+                            value={kommentaar}
+                            onChange={e => setKommentaar(e.target.value)}
+                            rows={3}
+                            placeholder="Kirjelda lühidalt tühistamise põhjust (min 5 tähemärki)"
+                            style={{ resize: 'vertical' }}
+                            required
+                        />
+                        {kommentaar.length > 0 && kommentaar.trim().length < 5 && (
+                            <span style={{ fontSize: '.75rem', color: '#c41c1c' }}>
+                                Kommentaar peab olema vähemalt 5 tähemärki
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '.75rem', justifyContent: 'flex-end' }}>
+                        <button type="button" className="bron-btn bron-btn-secondary" onClick={onSulge}>
+                            Loobu
+                        </button>
+                        <button type="submit" className="bron-btn bron-btn-danger" disabled={!kehtiv}>
+                            Kinnita tühistamine
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 function fmt(iso) {
     return new Date(iso).toLocaleString('et-EE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -52,7 +128,7 @@ function BroneeringRida({ b, onCancel, cancelledId, showUser = false }) {
                                 variant="outline" size="sm"
                             >Muuda</TTNewButton>
                             {/* Tühista */}
-                            <TTNewButton variant="danger" size="sm" onClick={() => onCancel(b.id)}>Tühista</TTNewButton>
+                            <TTNewButton variant="danger" size="sm" onClick={() => onCancel(b)}>Tühista</TTNewButton>
                         </div>
                 )}
             </td>
@@ -64,13 +140,18 @@ export default function MinuBroneeringud() {
     const { currentRole, canSeeOwnBookings, isSuper } = useRole();
     const [activeTab, setActiveTab] = useState(0);
     const [cancelledIds, setCancelledIds] = useState(new Set());
+    const [tyhistamisModaal, setTyhistamisModaal] = useState(null); // broneering objekt
 
     const myBookings = useMemo(() => getMyBookings(currentRole), [currentRole]);
     const allBookings = useMemo(() => isSuper ? getAllBookings() : [], [isSuper]);
 
     if (!canSeeOwnBookings) return <LigipaasPuudub />;
 
-    function cancel(id) { setCancelledIds(prev => new Set([...prev, id])); }
+    function cancel(broneering) { setTyhistamisModaal(broneering); }
+    function kinnitaTyhistamine({ id }) {
+        setCancelledIds(prev => new Set([...prev, id]));
+        setTyhistamisModaal(null);
+    }
 
     const upcoming = myBookings.filter(isUpcoming);
     const past = myBookings.filter(b => !isUpcoming(b));
@@ -116,6 +197,13 @@ export default function MinuBroneeringud() {
 
     return (
         <div className="bron-page">
+            {tyhistamisModaal && (
+                <TyhistamineModaal
+                    broneering={tyhistamisModaal}
+                    onKinnita={kinnitaTyhistamine}
+                    onSulge={() => setTyhistamisModaal(null)}
+                />
+            )}
             <BronBreadcrumbs items={[{ label: 'Avaleht', to: '/' }, { label: 'Minu broneeringud' }]} />
             <div className="bron-page-header">
                 <div>

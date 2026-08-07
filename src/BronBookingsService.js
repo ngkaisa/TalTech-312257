@@ -15,7 +15,7 @@ export function getMyBookings(role = 'TUDENG') {
     // filtreerime alla ~15 tk isikliku vaate jaoks.
     const mine = BRONEERINGUD.filter((b, i) => i % 17 === 3 && b.staatus !== BRONEERINGU_STAATUS.GHOST);
 
-    return mine
+    const mapped = mine
         .slice(0, 15)
         .map((b) => {
             const ruum = RUUMID.find((r) => r.id === b.ruum_id);
@@ -35,6 +35,14 @@ export function getMyBookings(role = 'TUDENG') {
             };
         })
         .sort((a, b) => (a.algus < b.algus ? 1 : -1));
+
+    // Demo tuleviku broneeringud — näitavad "Tühista" nuppu
+    const tuleviku = [
+        { id: 'demo-f1', ruum_id: 'u01-401', ruum: 'U01-401', hoone: 'U01 — Peahoone', ruumitypp_label: 'Auditoorium', algus: '2026-08-12T10:00:00', lopp: '2026-08-12T12:00:00', staatus: 'kinnitatud', syndmus_label: 'Õppe- ja teadustöö', syndmus: 'oppetooo', kestus_h: 2, allikas: 'kasutaja' },
+        { id: 'demo-f2', ruum_id: 'u01-303', ruum: 'U01-303', hoone: 'U01 — Peahoone', ruumitypp_label: 'Seminariruum', algus: '2026-08-20T14:00:00', lopp: '2026-08-20T16:00:00', staatus: 'kinnitatud', syndmus_label: 'Iseseisev õppetöö', syndmus: 'iseseisvoppetoo', kestus_h: 2, allikas: 'kasutaja' },
+    ];
+
+    return [...tuleviku, ...mapped];
 }
 
 // Kasutajanimed admin-vaate jaoks (demo)
