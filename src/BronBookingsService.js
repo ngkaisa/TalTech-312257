@@ -197,7 +197,7 @@ export function searchRooms(query = {}) {
         results = results.filter((r) => {
             return !BRONEERINGUD.some((b) => {
                 if (b.ruum_id !== r.id) return false;
-                if (b.staatus === 'tühistatud' || b.staatus === 'ghost') return false;
+                if (b.staatus === 'tühistatud' || b.staatus === 'taotlus') return false;
                 const bStart = new Date(b.algus);
                 const bEnd = new Date(b.lopp);
                 return bStart < reqEnd && bEnd > now;
@@ -208,7 +208,7 @@ export function searchRooms(query = {}) {
     return results.map((r) => {
         const todayBookings = BRONEERINGUD.filter((b) => {
             if (b.ruum_id !== r.id) return false;
-            if (b.staatus === 'tühistatud' || b.staatus === 'ghost') return false;
+            if (b.staatus === 'tühistatud' || b.staatus === 'taotlus') return false;
             const algus = new Date(b.algus);
             const lopp = new Date(b.lopp);
             return algus.toDateString() === now.toDateString() && lopp > now;
@@ -309,14 +309,16 @@ export function getRoomScheduleWithContacts(ruum_id) {
     }).sort((a, b) => new Date(a.algus) - new Date(b.algus));
 
     return bookings.slice(0, 12).map((b, i) => {
+        const isTunniplaan = b.allikas === 'tunniplaan';
         const k = KASUTAJAD_FULL[i % KASUTAJAD_FULL.length];
         return {
             ...b,
-            broneerija_nimi:    k.nimi,
-            broneerija_email:   k.email,
-            broneerija_telefon: k.telefon,
-            broneerija_org:     k.org,
-            broneerija_tyyp:    k.tyyp,
+            // Tunniplaani broneeringul pole kontaktandmeid
+            broneerija_nimi:    isTunniplaan ? null : k.nimi,
+            broneerija_email:   isTunniplaan ? null : k.email,
+            broneerija_telefon: isTunniplaan ? null : k.telefon,
+            broneerija_org:     isTunniplaan ? null : k.org,
+            broneerija_tyyp:    isTunniplaan ? 'tunniplaan' : k.tyyp,
             algus_fmt: fmtTime(b.algus),
             lopp_fmt:  fmtTime(b.lopp),
             paev: new Date(b.algus).toLocaleDateString('et-EE', { weekday: 'short', day: '2-digit', month: '2-digit' }),
@@ -380,3 +382,35 @@ export function getRoomFeedback(ruum_id) {
 }
 
 export { RUUMITYYBID, SYNDMUSETYYBID };
+
+// ─────────────────────────────────────────────────────────────────
+// Tunniplaani konflikti kontroll broneerimise vormile
+// ─────────────────────────────────────────────────────────────────
+/**
+ * Tagastab tunniplaani broneeringud, mis kattuvad soovitud ajaperioodiga.
+ * Kasutatakse BroneeringuVormis hoiatuse kuvamiseks.
+ */
+export function getTunniplaanConflicts(ruum_id, kuupaev, kellaaeg_min, kestus_h) {
+    if (!ruum_id || !kuupaev || kellaaeg_min == null || !kestus_h) return [];
+    const reqStart = new Date(kuupaev);
+    reqStart.setHours(0, kellaaeg_min, 0, 0);
+    const reqEnd = new Date(reqStart.getTime() + kestus_h * 3600 * 1000);
+
+    function fmtTime(iso) {
+        const d = new Date(iso);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    return BRONEERINGUD.filter(b => {
+        if (b.ruum_id !== ruum_id) return false;
+        if (b.allikas !== 'tunniplaan') return false;
+        const bStart = new Date(b.algus);
+        const bEnd = new Date(b.lopp);
+        return bStart < reqEnd && bEnd > reqStart;
+    }).map(b => ({
+        ...b,
+        algus_fmt: fmtTime(b.algus),
+        lopp_fmt:  fmtTime(b.lopp),
+        paev: new Date(b.algus).toLocaleDateString('et-EE', { weekday: 'long', day: '2-digit', month: '2-digit' }),
+    }));
+}

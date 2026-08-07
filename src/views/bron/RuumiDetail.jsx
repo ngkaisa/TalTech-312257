@@ -212,26 +212,47 @@ export default function RuumiDetail() {
                                 <tbody>
                                     {schedule.map(b => {
                                         const isNow = new Date(b.algus) <= NOW_DISPLAY && new Date(b.lopp) > NOW_DISPLAY;
+                                        const isTunniplaan = b.allikas === 'tunniplaan';
+                                        const rowBg = isTunniplaan ? '#fef3c7' : isNow ? 'var(--tt-purple-100)' : undefined;
                                         return (
-                                            <tr key={b.id} style={isNow ? { background: 'var(--tt-purple-100)' } : {}}>
+                                            <tr key={b.id} style={rowBg ? { background: rowBg } : {}}>
                                                 <td>{b.paev}</td>
                                                 <td style={{ whiteSpace: 'nowrap' }}>{b.algus_fmt}–{b.lopp_fmt}</td>
-                                                <td>{b.syndmus_label}</td>
+                                                <td>
+                                                    {b.syndmus_label}
+                                                    {isTunniplaan && (
+                                                        <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>Tunniplaan</Badge>
+                                                    )}
+                                                </td>
                                                 <td style={{ fontWeight: isNow ? 700 : 400 }}>
-                                                    {b.broneerija_nimi}
-                                                    {isNow && <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>praegu ruumis</Badge>}
+                                                    {isTunniplaan ? (
+                                                        <span style={{ color: 'var(--tt-text-muted)', fontStyle: 'italic', fontSize: '.85rem' }}>
+                                                            Tunniplaan (ülimuslik)
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            {b.broneerija_nimi}
+                                                            {isNow && <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>praegu ruumis</Badge>}
+                                                        </>
+                                                    )}
                                                 </td>
                                                 <td>
-                                                    <a href={`mailto:${b.broneerija_email}`} style={{ color: 'var(--tt-purple-500)' }}>
-                                                        {b.broneerija_email}
-                                                    </a>
+                                                    {!isTunniplaan && (
+                                                        <a href={`mailto:${b.broneerija_email}`} style={{ color: 'var(--tt-purple-500)' }}>
+                                                            {b.broneerija_email}
+                                                        </a>
+                                                    )}
                                                 </td>
                                                 <td style={{ whiteSpace: 'nowrap' }}>
-                                                    <a href={`tel:${b.broneerija_telefon}`} style={{ color: 'var(--tt-purple-500)' }}>
-                                                        {b.broneerija_telefon}
-                                                    </a>
+                                                    {!isTunniplaan && (
+                                                        <a href={`tel:${b.broneerija_telefon}`} style={{ color: 'var(--tt-purple-500)' }}>
+                                                            {b.broneerija_telefon}
+                                                        </a>
+                                                    )}
                                                 </td>
-                                                <td style={{ fontSize: '.78rem', color: 'var(--tt-text-muted)' }}>{b.broneerija_org}</td>
+                                                <td style={{ fontSize: '.78rem', color: 'var(--tt-text-muted)' }}>
+                                                    {isTunniplaan ? '—' : b.broneerija_org}
+                                                </td>
                                             </tr>
                                         );
                                     })}

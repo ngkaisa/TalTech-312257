@@ -5,6 +5,43 @@ import { RUUMID, SYNDMUSETYYBID } from '../../BronStatisticsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import { useRole } from '../../context/RoleContext';
 
+// ─── §1.1.5 — Sündmuse tüüpide piiramine rolli + ruumitüübi järgi ──────────
+// "Näiteks õperuumi puhul saab tudeng valida vaid sündmuse tüübiks „Iseseisev õppetöö""
+const SYNDMUS_MATRIX = {
+    // opiruum: ainult iseseisev õppetöö
+    opiruum:                      ['iseseisev'],
+    // arvutiklass: iseseisev + õppe-ja teadustöö
+    arvutiklass:                  ['iseseisev', 'oppe_teadus'],
+    // seminariruum: konsultatsioon, õppe-ja teadustöö, iseseisev, eksam
+    seminariruum:                 ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon'],
+    // üldkasutatav auditoorium: kõige laiemad õigused uni-ID kasutajal
+    uldkasutatav_auditoorium:     ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon', 'eelnadal'],
+    // taotluse-ruumid (uni-kasutaja esitab taotluse igal juhul)
+    aula:                         ['oppe_teadus', 'muu', 'eelnadal'],
+    eriotstarbeline_auditoorium:  ['oppe_teadus', 'muu'],
+    labor:                        ['oppe_teadus'],
+    teaduslabor:                  ['oppe_teadus'],
+    oppelabor:                    ['oppe_teadus', 'iseseisev'],
+    spordiruum:                   ['muu'],
+    saun:                         ['muu'],
+    tookoda:                      ['oppe_teadus', 'muu'],
+};
+
+/**
+ * Tagastab lubatud sündmuse tüübid rolli ja ruumitüübi järgi.
+ * Superkasutaja ja haldur saavad kõik tüübid.
+ * Väline kasutaja / guest: ainult "Muu" (vaikimisi) + "Rent".
+ * Uni-ID: sõltub ruumitüübist (SYNDMUS_MATRIX).
+ */
+function getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, ruumitypp) {
+    if (isSuper || isHaldur) return SYNDMUSETYYBID;
+    if (isExt || isGuest)   return SYNDMUSETYYBID.filter(s => ['muu', 'rent'].includes(s.code));
+    // UNI: ruumitüübi järgi piiratud
+    const allowed = SYNDMUS_MATRIX[ruumitypp];
+    if (!allowed) return SYNDMUSETYYBID; // tundmatu tüüp → kõik
+    return SYNDMUSETYYBID.filter(s => allowed.includes(s.code));
+}
+
 const KELLAAEG_OPTS = Array.from({ length: 29 }, (_, i) => {
     const totalMin = 480 + i * 30;
     const h = Math.floor(totalMin / 60);
@@ -78,18 +115,21 @@ export default function BroneeringuVorm() {
     const { ruum_id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { isExt, isUni, isGuest, isLoggedIn } = useRole();
+    const { isExt, isUni, isGuest, isLoggedIn, isSuper, isHaldur } = useRole();
     const [submitted, setSubmitted] = useState(false);
 
     const prefill = location.state || {};
     const defaultRoom = ruum_id ? RUUMID.find(r => r.id === ruum_id) : null;
+
+    // §1.1.5 — väline kasutaja vaikimisi "muu"
+    const defaultSyndmus = (isExt || isGuest) ? 'muu' : 'oppe_teadus';
 
     const [form, setForm] = useState({
         ruum_id: defaultRoom?.id || '',
         kuupaev: prefill.kuupaev || '2026-08-10',
         kellaaeg: prefill.kellaaeg !== undefined ? prefill.kellaaeg : 540,
         kestus: prefill.kestus !== undefined ? prefill.kestus : 2,
-        syndmus: 'oppe_teadus',
+        syndmus: defaultSyndmus,
         pohjendus: '',
         osalejate_arv: '',
         korduvus: prefill.korduvus || 'none',
@@ -106,8 +146,28 @@ export default function BroneeringuVorm() {
     const selectedRuumitypp = RUUMID.find(r => r.id === form.ruum_id)?.ruumitypp || '';
     const needsTaotlus = vajabTaotlust({ isExt, isUni, isGuest }, selectedRuumitypp);
 
+    // §1.1.5 — lubatud sündmuse tüübid selle rolli + ruumitüübi kombinatsioonile
+    const allowedSyndmused = useMemo(
+        () => getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, selectedRuumitypp),
+        [isSuper, isHaldur, isExt, isGuest, selectedRuumitypp]
+    );
+
+    // Kui valitud sündmus pole enam lubatud (ruumitüüp muutus), lähtesta
+    useMemo(() => {
+        if (allowedSyndmused.length > 0 && !allowedSyndmused.find(s => s.code === form.syndmus)) {
+            setForm(f => ({ ...f, syndmus: allowedSyndmused[0].code }));
+        }
+    }, [allowedSyndmused]);
+
+    // §1.1.3 — Tunniplaani konfliktid
+    const tunniplaanKonfliktid = useMemo(
+        () => getTunniplaanConflicts(form.ruum_id, form.kuupaev, form.kellaaeg, form.kestus),
+        [form.ruum_id, form.kuupaev, form.kellaaeg, form.kestus]
+    );
+
     function handleSubmit(e) {
         e.preventDefault();
+        if (tunniplaanKonfliktid.length > 0) return; // kaitseks
         setSubmitted(true);
     }
 
@@ -218,10 +278,15 @@ export default function BroneeringuVorm() {
                         </div>
 
                         <div className="bron-form-group">
-                            <label>Sündmuse tüüp *</label>
+                            <label>Sündmuse tüüb *</label>
                             <select value={form.syndmus} onChange={e => set('syndmus', e.target.value)} required>
-                                {SYNDMUSETYYBID.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+                                {allowedSyndmused.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
                             </select>
+                            {allowedSyndmused.length < SYNDMUSETYYBID.length && (
+                                <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>
+                                    Sinu õiguste ja ruumitüübi alusel on saadaval {allowedSyndmused.length} sündmuse tüüpi {SYNDMUSETYYBID.length}-st.
+                                </span>
+                            )}
                         </div>
 
                         <div className="bron-form-group">
@@ -317,8 +382,34 @@ export default function BroneeringuVorm() {
                     </div>
                 </div>
 
+                {/* §1.1.3 — Tunniplaan ülimuslikkus: konflikti hoiatus */}
+                {tunniplaanKonfliktid.length > 0 && (
+                    <div style={{
+                        background: '#fef3c7', border: '2px solid #f59e0b', borderRadius: 8,
+                        padding: '1rem', marginBottom: '1rem',
+                        display: 'flex', gap: '.75rem', alignItems: 'flex-start',
+                    }}>
+                        <span className="material-icons" style={{ color: '#b45309', fontSize: '1.25rem', marginTop: '1px' }}>warning</span>
+                        <div>
+                            <p style={{ margin: '0 0 .4rem', fontWeight: 700, color: '#92400e' }}>
+                                Tunniplaani broneering katab selle aja — broneerimine pole võimalik
+                            </p>
+                            <p style={{ margin: '0 0 .5rem', fontSize: '.85rem', color: '#b45309' }}>
+                                Tunniplaanist imporditud sündmused on ülimuslikud ning neid ei saa BRON-ist muuta ega kustutada.
+                            </p>
+                            {tunniplaanKonfliktid.map(tp => (
+                                <div key={tp.id} style={{ fontSize: '.82rem', color: '#92400e', display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+                                    <span className="material-icons" style={{ fontSize: '.9rem' }}>schedule</span>
+                                    <strong>{tp.paev}</strong> {tp.algus_fmt}–{tp.lopp_fmt} · {tp.syndmus_label}
+                                    <Badge color="purple" size="sm">Tunniplaan</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '.75rem' }}>
-                    <TTNewButton type="submit" variant="primary">
+                    <TTNewButton type="submit" variant="primary" isDisabled={tunniplaanKonfliktid.length > 0}>
                         {needsTaotlus
                             ? isRecurring ? `Esita ${occurrences.length} taotlust` : 'Esita taotlus'
                             : isRecurring ? `Kinnita ${occurrences.length} broneeringut` : 'Kinnita broneering'

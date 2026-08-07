@@ -50,7 +50,8 @@ export const BRONEERINGU_STAATUS = {
     AKTIIVNE: 'aktiivne',
     LOPPENUD: 'lõppenud',
     TUHISTATUD: 'tühistatud',
-    GHOST: 'taotlus'
+    GHOST: 'taotlus',
+    TUNNIPLAAN: 'tunniplaan',  // Tunniplaanist imporditud, ülimuslik
 };
 
 // -----------------------------------------------------------------------------
@@ -234,6 +235,12 @@ function generateBookings() {
                 //   Tühistatud/ghost: mitte kunagi kasutuses
                 const sensorUsed = staatus === BRONEERINGU_STAATUS.LOPPENUD || staatus === BRONEERINGU_STAATUS.AKTIIVNE ? rng() < 0.78 : false;
 
+                // ~8% tõenäosusega tunniplaan broneering (ülimuslik, ei saa kustutada)
+                const isTunniplaan = staatus !== BRONEERINGU_STAATUS.TUHISTATUD
+                    && staatus !== BRONEERINGU_STAATUS.GHOST
+                    && rng() < 0.08
+                    && ['uldkasutatav_auditoorium', 'seminariruum', 'arvutiklass', 'opiruum'].includes(ruum.ruumitypp);
+
                 bookings.push({
                     id: `B${id++}`,
                     ruum_id: ruum.id,
@@ -243,13 +250,14 @@ function generateBookings() {
                     algus: startDate.toISOString(),
                     lopp: endDate.toISOString(),
                     kestus_h: slot.endHour - slot.startHour,
-                    staatus,
-                    syndmus: syndmus.code,
-                    syndmus_label: syndmus.label,
-                    kasutaja_roll: pick(rng, ['UNI', 'UNI', 'UNI', 'HALDUR', 'SUPER']),
-                    tuhistatud_enne_algust_min: tuhistatudEnneAlgustMin,
-                    tuhistaja_roll: tuhistajaRoll,
-                    andur_kasutusel: sensorUsed
+                    staatus: isTunniplaan ? BRONEERINGU_STAATUS.TUNNIPLAAN : staatus,
+                    syndmus: isTunniplaan ? 'oppe_teadus' : syndmus.code,
+                    syndmus_label: isTunniplaan ? 'Õppe- ja teadustöö' : syndmus.label,
+                    allikas: isTunniplaan ? 'tunniplaan' : 'bron',
+                    kasutaja_roll: isTunniplaan ? 'TUNNIPLAAN' : pick(rng, ['UNI', 'UNI', 'UNI', 'HALDUR', 'SUPER']),
+                    tuhistatud_enne_algust_min: isTunniplaan ? null : tuhistatudEnneAlgustMin,
+                    tuhistaja_roll: isTunniplaan ? null : tuhistajaRoll,
+                    andur_kasutusel: isTunniplaan ? true : sensorUsed
                 });
             }
         }
