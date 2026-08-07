@@ -235,13 +235,15 @@ export function searchRooms(query = {}) {
         now = new Date('2026-08-03T10:30:00');
     }
 
-    // Kestuse filter: eemalda ruumid kus soovitud ajavahemik on hõivatud
+    // §1.1.1 — Kestuse filter: eemalda ruumid kus soovitud ajavahemik on hõivatud.
+    // GHOST (taotlus menetlusel) blokeerib ruumi — samal ajal ei saa teist broneeringut teha.
     if (query.kuupaev && query.kellaaeg != null && query.kestus) {
         const reqEnd = new Date(now.getTime() + query.kestus * 3600 * 1000);
         results = results.filter((r) => {
             return !BRONEERINGUD.some((b) => {
                 if (b.ruum_id !== r.id) return false;
-                if (b.staatus === 'tühistatud' || b.staatus === 'taotlus') return false;
+                // Ainult tühistatud ei blokeeri; ghost (menetlusel taotlus) BLOKEERIB
+                if (b.staatus === BRONEERINGU_STAATUS.TUHISTATUD) return false;
                 const bStart = new Date(b.algus);
                 const bEnd = new Date(b.lopp);
                 return bStart < reqEnd && bEnd > now;
@@ -250,9 +252,10 @@ export function searchRooms(query = {}) {
     }
 
     return results.map((r) => {
+        // §1.1.1 — GHOST broneeringud (menetlusel taotlused) blokeerivad ruumi
         const todayBookings = BRONEERINGUD.filter((b) => {
             if (b.ruum_id !== r.id) return false;
-            if (b.staatus === 'tühistatud' || b.staatus === 'taotlus') return false;
+            if (b.staatus === BRONEERINGU_STAATUS.TUHISTATUD) return false;
             const algus = new Date(b.algus);
             const lopp = new Date(b.lopp);
             return algus.toDateString() === now.toDateString() && lopp > now;
@@ -261,6 +264,7 @@ export function searchRooms(query = {}) {
         const currentBooking = todayBookings.find((b) => new Date(b.algus) <= now && new Date(b.lopp) > now);
         const nextBooking = todayBookings.find((b) => new Date(b.algus) > now);
         const isBusy = !!currentBooking;
+        const isTaotlusMenetlusel = isBusy && currentBooking.staatus === BRONEERINGU_STAATUS.GHOST;
 
         function fmtTime(iso) {
             const d = new Date(iso);
@@ -268,10 +272,15 @@ export function searchRooms(query = {}) {
         }
 
         let hetkel_vaba_tekst;
-        if (isBusy) {
+        if (isTaotlusMenetlusel) {
+            hetkel_vaba_tekst = `Taotlus menetlusel kuni ${fmtTime(currentBooking.lopp)}`;
+        } else if (isBusy) {
             hetkel_vaba_tekst = `Hõivatud kuni ${fmtTime(currentBooking.lopp)}`;
         } else if (nextBooking) {
-            hetkel_vaba_tekst = `Vaba kuni ${fmtTime(nextBooking.algus)}`;
+            const nextIsTaotlus = nextBooking.staatus === BRONEERINGU_STAATUS.GHOST;
+            hetkel_vaba_tekst = nextIsTaotlus
+                ? `Vaba kuni ${fmtTime(nextBooking.algus)} (seejärel taotlus menetlusel)`
+                : `Vaba kuni ${fmtTime(nextBooking.algus)}`;
         } else {
             hetkel_vaba_tekst = 'Vaba täna kuni 22:00';
         }
@@ -279,6 +288,7 @@ export function searchRooms(query = {}) {
         return {
             ...r,
             vaba: !isBusy,
+            taotlus_menetlusel: isTaotlusMenetlusel,
             hetkel_vaba_tekst,
             jargmine_vaba: isBusy ? (nextBooking ? fmtTime(nextBooking.algus) : null) : null
         };
@@ -314,9 +324,10 @@ export function getRoomAvailability(ruum_id) {
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
     const today = NOW_REF.toDateString();
+    // §1.1.1 — GHOST (menetlusel taotlused) blokeerivad ruumi — ainult tühistatud ei blokeeri
     const todayBookings = BRONEERINGUD.filter(b => {
         if (b.ruum_id !== ruum_id) return false;
-        if (b.staatus === 'tühistatud' || b.staatus === BRONEERINGU_STAATUS.GHOST) return false;
+        if (b.staatus === BRONEERINGU_STAATUS.TUHISTATUD) return false;
         const lopp = new Date(b.lopp);
         return new Date(b.algus).toDateString() === today && lopp > NOW_REF;
     }).sort((a, b) => new Date(a.algus) - new Date(b.algus));
@@ -324,13 +335,21 @@ export function getRoomAvailability(ruum_id) {
     const currentBooking = todayBookings.find(b => new Date(b.algus) <= NOW_REF && new Date(b.lopp) > NOW_REF);
     const nextBooking    = todayBookings.find(b => new Date(b.algus) > NOW_REF);
     const isBusy = !!currentBooking;
+    const isTaotlusMenetlusel = isBusy && currentBooking.staatus === BRONEERINGU_STAATUS.GHOST;
 
     let hetkel_vaba_tekst;
-    if (isBusy)            hetkel_vaba_tekst = `Hõivatud kuni ${fmtTime(currentBooking.lopp)}`;
-    else if (nextBooking)  hetkel_vaba_tekst = `Vaba kuni ${fmtTime(nextBooking.algus)}`;
-    else                   hetkel_vaba_tekst = 'Vaba täna kuni 22:00';
+    if (isTaotlusMenetlusel)   hetkel_vaba_tekst = `Taotlus menetlusel kuni ${fmtTime(currentBooking.lopp)}`;
+    else if (isBusy)           hetkel_vaba_tekst = `Hõivatud kuni ${fmtTime(currentBooking.lopp)}`;
+    else if (nextBooking) {
+        const nextIsTaotlus = nextBooking.staatus === BRONEERINGU_STAATUS.GHOST;
+        hetkel_vaba_tekst = nextIsTaotlus
+            ? `Vaba kuni ${fmtTime(nextBooking.algus)} (seejärel taotlus menetlusel)`
+            : `Vaba kuni ${fmtTime(nextBooking.algus)}`;
+    } else {
+        hetkel_vaba_tekst = 'Vaba täna kuni 22:00';
+    }
 
-    return { vaba: !isBusy, hetkel_vaba_tekst, currentBooking, nextBooking };
+    return { vaba: !isBusy, taotlus_menetlusel: isTaotlusMenetlusel, hetkel_vaba_tekst, currentBooking, nextBooking };
 }
 
 /**

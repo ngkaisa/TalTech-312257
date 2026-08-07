@@ -161,7 +161,8 @@ export default function RuumiDetail() {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.4rem' }}>
                         <h1 style={{ margin: 0 }}>{room.code}</h1>
-                        <StatusTag type={avail.vaba ? 'success' : 'danger'}>
+                        {/* §1.1.1 — ghost booking (taotlus menetlusel) kuvatakse warning-ina */}
+                        <StatusTag type={avail.taotlus_menetlusel ? 'warning' : avail.vaba ? 'success' : 'danger'}>
                             {avail.hetkel_vaba_tekst}
                         </StatusTag>
                     </div>

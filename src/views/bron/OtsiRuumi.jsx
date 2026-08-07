@@ -248,8 +248,9 @@ export default function OtsiRuumi() {
                         </div>
                         <div className="bron-room-card__footer">
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
-                                <StatusTag type={room.vaba ? 'success' : 'danger'}>
-                                    {room.vaba ? 'Vaba' : 'Hõivatud'}
+                                {/* §1.1.1 — ghost booking (menetlusel taotlus) = warning; hõivatud = danger; vaba = success */}
+                                <StatusTag type={room.taotlus_menetlusel ? 'warning' : room.vaba ? 'success' : 'danger'}>
+                                    {room.taotlus_menetlusel ? 'Taotlus menetlusel' : room.vaba ? 'Vaba' : 'Hõivatud'}
                                 </StatusTag>
                                 <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>
                                     {room.hetkel_vaba_tekst}
