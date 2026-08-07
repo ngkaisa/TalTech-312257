@@ -124,10 +124,10 @@ a { color: inherit; }
 .bron-page-header__title { min-width: 0; flex: 1; }
 .bron-page-header h1 {
   margin: 0 0 .3rem;
-  font-size: 1.7rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--tt-purple-500);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .bron-page-header p {
   margin: 0;
@@ -671,7 +671,7 @@ a { color: inherit; }
     gap: .75rem;
     margin-bottom: 1.25rem;
   }
-  .bron-page-header h1 { font-size: 1.3rem; }
+  .bron-page-header h1 { font-size: 1.2rem; }
   .bron-page-header p  { font-size: .85rem; }
 
   /* Galerii */
@@ -715,7 +715,7 @@ a { color: inherit; }
 @media (max-width: 480px) {
   .bron-main { padding: .75rem; }
 
-  .bron-page-header h1 { font-size: 1.15rem; }
+  .bron-page-header h1 { font-size: 1.1rem; }
 
   /* KPI 2 veergu */
   .bron-kpi-grid  { grid-template-columns: repeat(2, 1fr); gap: .65rem; }
