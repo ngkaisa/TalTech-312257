@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
+import { getAllRequests, getMyRequests } from '../../BronBookingsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
 import StaatusKaart from '../../components/bron/StaatusKaart';
 import { useRole } from '../../context/RoleContext';
-import { getAllRequests, getMyRequests } from '../../BronBookingsService';
 
 function fmt(iso) {
     return new Date(iso).toLocaleString('et-EE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -14,7 +14,7 @@ function fmtDate(iso) {
 }
 
 export default function MinuTaotlused() {
-    const { currentRole, isLoggedIn, isExt, isUni, canSeeFullStatistics } = useRole();
+    const { currentRole, isLoggedIn, isExt, isTudeng, isTootaja, canSeeFullStatistics } = useRole();
     const [activeTab, setActiveTab] = useState('mine');
     const [actionId, setActionId] = useState(null);
     const [action, setAction] = useState(null);
@@ -39,7 +39,7 @@ export default function MinuTaotlused() {
                         : 'Sinu esitatud broneeringutaotlused ja nende menetlusolek.'
                     }</p>
                 </div>
-                {(isUni || isExt) && (
+                {(isTudeng || isTootaja || isExt) && (
                     <a href="/otsi-ruumi" className="bron-btn bron-btn-primary">+ Uus taotlus</a>
                 )}
             </div>

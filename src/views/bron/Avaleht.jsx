@@ -58,7 +58,7 @@ const ACTION_CARDS = [
 
 export default function Avaleht() {
     const role = useRole();
-    const { currentRoleLabel, isGuest, isUni, isExt, isLoggedIn, canSeeFullStatistics } = role;
+    const { currentRoleLabel, isGuest, isTudeng, isTootaja, isExt, isLoggedIn, canSeeFullStatistics } = role;
 
     const subtitle = isGuest
         ? 'Sirvi TalTechi ruume ja vaata populaarseid broneerimisaegu.'

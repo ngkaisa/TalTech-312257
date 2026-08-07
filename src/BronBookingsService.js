@@ -10,7 +10,7 @@ import { BRONEERINGU_STAATUS, BRONEERINGUD, RUUMID, RUUMITYYBID, SYNDMUSETYYBID 
  * "Minu" broneeringud — võtame lihtsalt mingi kindla alamhulga aktiivsetest ja lõppenud
  * broneeringutest, et demol näidata mõistlikku listi.
  */
-export function getMyBookings(role = 'UNI') {
+export function getMyBookings(role = 'TUDENG') {
     // Näidise huvides valime iga 17. broneeringu — see annab ~200 broneeringut kokku,
     // filtreerime alla ~15 tk isikliku vaate jaoks.
     const mine = BRONEERINGUD.filter((b, i) => i % 17 === 3 && b.staatus !== BRONEERINGU_STAATUS.GHOST);
@@ -38,7 +38,7 @@ export function getMyBookings(role = 'UNI') {
  * "Minu" taotlused — ainult ghost/taotlus staatuses kirjed.
  * Näitab, et tavakasutajal on menetlusel taotlused.
  */
-export function getMyRequests(role = 'UNI') {
+export function getMyRequests(role = 'TUDENG') {
     const requests = BRONEERINGUD.filter((b) => b.staatus === BRONEERINGU_STAATUS.GHOST);
 
     return requests

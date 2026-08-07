@@ -6,39 +6,49 @@ import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import { useRole } from '../../context/RoleContext';
 
 // ─── §1.1.5 — Sündmuse tüüpide piiramine rolli + ruumitüübi järgi ──────────
-// "Näiteks õperuumi puhul saab tudeng valida vaid sündmuse tüübiks „Iseseisev õppetöö""
-const SYNDMUS_MATRIX = {
-    // opiruum: ainult iseseisev õppetöö
-    opiruum:                      ['iseseisev'],
-    // arvutiklass: iseseisev + õppe-ja teadustöö
-    arvutiklass:                  ['iseseisev', 'oppe_teadus'],
-    // seminariruum: konsultatsioon, õppe-ja teadustöö, iseseisev, eksam
-    seminariruum:                 ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon'],
-    // üldkasutatav auditoorium: kõige laiemad õigused uni-ID kasutajal
-    uldkasutatav_auditoorium:     ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon', 'eelnadal'],
-    // taotluse-ruumid (uni-kasutaja esitab taotluse igal juhul)
+// Töötaja / õppejõud — laiem ligipääs
+const SYNDMUS_MATRIX_TOOTAJA = {
+    opiruum:                      ['oppe_teadus', 'iseseisev', 'konsultatsioon', 'eksam'],
+    arvutiklass:                  ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon'],
+    seminariruum:                 ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon', 'muu'],
+    uldkasutatav_auditoorium:     ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon', 'eelnadal', 'muu'],
     aula:                         ['oppe_teadus', 'muu', 'eelnadal'],
     eriotstarbeline_auditoorium:  ['oppe_teadus', 'muu'],
-    labor:                        ['oppe_teadus'],
-    teaduslabor:                  ['oppe_teadus'],
+    labor:                        ['oppe_teadus', 'iseseisev'],
+    teaduslabor:                  ['oppe_teadus', 'iseseisev'],
     oppelabor:                    ['oppe_teadus', 'iseseisev'],
     spordiruum:                   ['muu'],
     saun:                         ['muu'],
     tookoda:                      ['oppe_teadus', 'muu'],
 };
 
+// Tudeng — piiratum ligipääs
+const SYNDMUS_MATRIX_TUDENG = {
+    opiruum:                      ['iseseisev'],
+    arvutiklass:                  ['iseseisev', 'oppe_teadus'],
+    seminariruum:                 ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon'],
+    uldkasutatav_auditoorium:     ['oppe_teadus', 'iseseisev', 'eksam', 'konsultatsioon', 'eelnadal'],
+    aula:                         ['muu'],
+    eriotstarbeline_auditoorium:  ['muu'],
+    labor:                        ['iseseisev'],
+    teaduslabor:                  ['iseseisev'],
+    oppelabor:                    ['iseseisev'],
+    spordiruum:                   ['muu'],
+    saun:                         ['muu'],
+    tookoda:                      ['muu'],
+};
+
 /**
  * Tagastab lubatud sündmuse tüübid rolli ja ruumitüübi järgi.
- * Superkasutaja ja haldur saavad kõik tüübid.
- * Väline kasutaja / guest: ainult "Muu" (vaikimisi) + "Rent".
- * Uni-ID: sõltub ruumitüübist (SYNDMUS_MATRIX).
+ * Super / haldur → kõik. Väline / guest → muu + rent. 
+ * Töötaja / tudeng → rolli-spetsiifiline maatriks.
  */
-function getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, ruumitypp) {
+function getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, isTudeng, isTootaja, ruumitypp) {
     if (isSuper || isHaldur) return SYNDMUSETYYBID;
     if (isExt || isGuest)   return SYNDMUSETYYBID.filter(s => ['muu', 'rent'].includes(s.code));
-    // UNI: ruumitüübi järgi piiratud
-    const allowed = SYNDMUS_MATRIX[ruumitypp];
-    if (!allowed) return SYNDMUSETYYBID; // tundmatu tüüp → kõik
+    const matrix = isTudeng ? SYNDMUS_MATRIX_TUDENG : SYNDMUS_MATRIX_TOOTAJA;
+    const allowed = matrix[ruumitypp];
+    if (!allowed) return SYNDMUSETYYBID;
     return SYNDMUSETYYBID.filter(s => allowed.includes(s.code));
 }
 
@@ -75,9 +85,9 @@ const UNI_TAOTLUS_RUUMID = new Set([
     'tookoda',
 ]);
 
-function vajabTaotlust({ isExt, isUni, isGuest }, ruumitypp) {
+function vajabTaotlust({ isExt, isTudeng, isTootaja, isGuest }, ruumitypp) {
     if (isExt || isGuest) return true;          // ext ja külastaja → alati taotlus
-    if (isUni) return UNI_TAOTLUS_RUUMID.has(ruumitypp); // uni → sõltub tüübist
+    if (isTudeng || isTootaja) return UNI_TAOTLUS_RUUMID.has(ruumitypp); // uni-ID → sõltub tüübist
     return false;                               // super / haldur → otse
 }
 
@@ -115,7 +125,7 @@ export default function BroneeringuVorm() {
     const { ruum_id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { isExt, isUni, isGuest, isLoggedIn, isSuper, isHaldur } = useRole();
+    const { isExt, isTudeng, isTootaja, isGuest, isLoggedIn, isSuper, isHaldur } = useRole();
     const [submitted, setSubmitted] = useState(false);
 
     const prefill = location.state || {};
@@ -144,12 +154,12 @@ export default function BroneeringuVorm() {
     const isRecurring = form.korduvus !== 'none';
 
     const selectedRuumitypp = RUUMID.find(r => r.id === form.ruum_id)?.ruumitypp || '';
-    const needsTaotlus = vajabTaotlust({ isExt, isUni, isGuest }, selectedRuumitypp);
+    const needsTaotlus = vajabTaotlust({ isExt, isTudeng, isTootaja, isGuest }, selectedRuumitypp);
 
     // §1.1.5 — lubatud sündmuse tüübid selle rolli + ruumitüübi kombinatsioonile
     const allowedSyndmused = useMemo(
-        () => getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, selectedRuumitypp),
-        [isSuper, isHaldur, isExt, isGuest, selectedRuumitypp]
+        () => getSyndmusedByRole(isSuper, isHaldur, isExt, isGuest, isTudeng, isTootaja, selectedRuumitypp),
+        [isSuper, isHaldur, isExt, isGuest, isTudeng, isTootaja, selectedRuumitypp]
     );
 
     // Kui valitud sündmus pole enam lubatud (ruumitüüp muutus), lähtesta
@@ -305,7 +315,7 @@ export default function BroneeringuVorm() {
                                     placeholder="Kirjelda üritust või kasutuse eesmärki..."
                                     required style={{ resize: 'vertical' }} />
                             </div>
-                            {isUni && selectedRuumitypp && (
+                            {(isTudeng || isTootaja) && selectedRuumitypp && (
                                 <div style={{ marginTop: '.75rem', display: 'flex', alignItems: 'flex-start', gap: '.5rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '.6rem .8rem', fontSize: '.82rem', color: '#92400e' }}>
                                     <span className="material-icons" style={{ fontSize: '1rem', marginTop: '1px' }}>info</span>
                                     <span>See ruumitüüp nõuab halduri kinnitust. Sinu taotlus jõustub broneeringuna pärast ruumihalduri heakskiitu.</span>

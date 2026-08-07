@@ -5,27 +5,30 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 export const ROLES = {
-    GUEST: 'guest',
-    SUPER: 'super',
-    HALDUR: 'haldur',
-    UNI: 'uni',
-    EXT: 'ext',
+    GUEST:   'guest',
+    SUPER:   'super',
+    HALDUR:  'haldur',
+    TOOTAJA: 'tootaja',  // töötaja / õppejõud — uni-ID
+    TUDENG:  'tudeng',   // tudeng — uni-ID
+    EXT:     'ext',      // väline kasutaja, ei oma uni-ID-d
 };
 
 export const ROLE_LABELS = {
-    [ROLES.GUEST]: 'Külastaja',
-    [ROLES.SUPER]: 'Superkasutaja',
-    [ROLES.HALDUR]: 'Ruumi haldur',
-    [ROLES.UNI]: 'Uni-ID kasutaja',
-    [ROLES.EXT]: 'Väline kasutaja',
+    [ROLES.GUEST]:   'Külastaja',
+    [ROLES.SUPER]:   'Superkasutaja',
+    [ROLES.HALDUR]:  'Ruumi haldur',
+    [ROLES.TOOTAJA]: 'Töötaja / õppejõud',
+    [ROLES.TUDENG]:  'Tudeng',
+    [ROLES.EXT]:     'Väline kasutaja',
 };
 
 export const ROLE_DESCRIPTIONS = {
-    [ROLES.GUEST]: 'Sisselogimata külastaja — ainult avalik info',
-    [ROLES.SUPER]: 'Admin — kõik õigused, kogu statistika, kõik ruumid',
-    [ROLES.HALDUR]: 'Ruumi omanik — enda ruumide statistika ja taotluste menetlus',
-    [ROLES.UNI]: 'Tudeng / töötaja / õppejõud — enda broneeringud, avalik statistika',
-    [ROLES.EXT]: 'Väline kasutaja — ainult ruumide taotlemine ja avalik info',
+    [ROLES.GUEST]:   'Sisselogimata külastaja — ainult avalik info',
+    [ROLES.SUPER]:   'Superkasutaja (admin) — kõik õigused, kogu statistika, kõik ruumid',
+    [ROLES.HALDUR]:  'Ruumi haldur (ruumi omanik) — enda ruumide statistika ja taotluste menetlus',
+    [ROLES.TOOTAJA]: 'Töötaja / õppejõud — uni-ID kasutaja, laiem broneerimisõigus',
+    [ROLES.TUDENG]:  'Tudeng — uni-ID kasutaja, piiratud broneerimisõigus',
+    [ROLES.EXT]:     'Väline kasutaja — ainult ruumide taotlemine ja avalik info',
 };
 
 const STORAGE_KEY = 'bron.currentRole';
@@ -56,15 +59,18 @@ export function RoleProvider({ children }) {
         currentRoleLabel: ROLE_LABELS[currentRole],
         currentRoleDescription: ROLE_DESCRIPTIONS[currentRole],
         setRole,
-        isGuest: currentRole === ROLES.GUEST,
-        isSuper: currentRole === ROLES.SUPER,
-        isHaldur: currentRole === ROLES.HALDUR,
-        isUni: currentRole === ROLES.UNI,
-        isExt: currentRole === ROLES.EXT,
-        isInternal: [ROLES.SUPER, ROLES.HALDUR, ROLES.UNI].includes(currentRole),
+        isGuest:   currentRole === ROLES.GUEST,
+        isSuper:   currentRole === ROLES.SUPER,
+        isHaldur:  currentRole === ROLES.HALDUR,
+        isTootaja: currentRole === ROLES.TOOTAJA,
+        isTudeng:  currentRole === ROLES.TUDENG,
+        isExt:     currentRole === ROLES.EXT,
+        // isUni säilib tagasiühilduvusena — tõene nii tudengi kui töötaja puhul
+        isUni: [ROLES.TOOTAJA, ROLES.TUDENG].includes(currentRole),
+        isInternal: [ROLES.SUPER, ROLES.HALDUR, ROLES.TOOTAJA, ROLES.TUDENG].includes(currentRole),
         isLoggedIn: currentRole !== ROLES.GUEST,
         canSeeFullStatistics: [ROLES.SUPER, ROLES.HALDUR].includes(currentRole),
-        canSeeOwnBookings: [ROLES.SUPER, ROLES.HALDUR, ROLES.UNI].includes(currentRole),
+        canSeeOwnBookings: [ROLES.SUPER, ROLES.HALDUR, ROLES.TOOTAJA, ROLES.TUDENG].includes(currentRole),
     };
 
     return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;

@@ -221,7 +221,7 @@ function generateBookings() {
                     staatus = BRONEERINGU_STAATUS.TUHISTATUD;
                     // Tühistamise moment eelnevalt: 5min-72h enne algust
                     tuhistatudEnneAlgustMin = pick(rng, [5, 15, 30, 60, 120, 240, 480, 1440, 2880, 4320]);
-                    tuhistajaRoll = pick(rng, ['UNI', 'HALDUR', 'SUPER']);
+                    tuhistajaRoll = pick(rng, ['TUDENG', 'TOOTAJA', 'HALDUR', 'SUPER']);
                 } else if (rTuhi < 0.15) {
                     staatus = BRONEERINGU_STAATUS.GHOST;
                 } else if (dayOffset === 0 && startDate > new Date()) {
@@ -254,7 +254,7 @@ function generateBookings() {
                     syndmus: isTunniplaan ? 'oppe_teadus' : syndmus.code,
                     syndmus_label: isTunniplaan ? 'Õppe- ja teadustöö' : syndmus.label,
                     allikas: isTunniplaan ? 'tunniplaan' : 'bron',
-                    kasutaja_roll: isTunniplaan ? 'TUNNIPLAAN' : pick(rng, ['UNI', 'UNI', 'UNI', 'HALDUR', 'SUPER']),
+                    kasutaja_roll: isTunniplaan ? 'TUNNIPLAAN' : pick(rng, ['TUDENG', 'TUDENG', 'TOOTAJA', 'TOOTAJA', 'HALDUR', 'SUPER']),
                     tuhistatud_enne_algust_min: isTunniplaan ? null : tuhistatudEnneAlgustMin,
                     tuhistaja_roll: isTunniplaan ? null : tuhistajaRoll,
                     andur_kasutusel: isTunniplaan ? true : sensorUsed

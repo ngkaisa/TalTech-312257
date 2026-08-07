@@ -1,6 +1,6 @@
+import { Header } from '@TalTech-IT/styleguide';
 import { forwardRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Header } from '@TalTech-IT/styleguide';
 import { ROLE_LABELS, ROLES, useRole } from '../context/RoleContext';
 
 /**
@@ -28,11 +28,12 @@ const LinkBehaviour = forwardRef(function LinkBehaviour({ href, children, ...res
 
 // Demo rollid → CVI roles prop vajalikule kujule (number key)
 const DEMO_ROLES_MAP = [
-    { key: 0, label: 'Külastaja',       value: ROLES.GUEST },
-    { key: 1, label: 'Uni-ID kasutaja', value: ROLES.UNI },
-    { key: 2, label: 'Väline kasutaja', value: ROLES.EXT },
-    { key: 3, label: 'Ruumi haldur',    value: ROLES.HALDUR },
-    { key: 4, label: 'Superkasutaja',   value: ROLES.SUPER },
+    { key: 0, label: 'Külastaja',             value: ROLES.GUEST },
+    { key: 1, label: 'Tudeng',                value: ROLES.TUDENG },
+    { key: 2, label: 'Töötaja / õppejõud',   value: ROLES.TOOTAJA },
+    { key: 3, label: 'Väline kasutaja',       value: ROLES.EXT },
+    { key: 4, label: 'Ruumi haldur',          value: ROLES.HALDUR },
+    { key: 5, label: 'Superkasutaja',         value: ROLES.SUPER },
 ];
 
 function roleKeyFor(roleValue) {
@@ -89,7 +90,7 @@ export default function AppTopbar() {
 
     const loginProps = isLoggedIn ? undefined : {
         label: 'Logi sisse',
-        onClick: () => setRole(ROLES.UNI),
+        onClick: () => setRole(ROLES.TUDENG),
     };
 
     const profileProps = isLoggedIn ? {
