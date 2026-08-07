@@ -1,8 +1,16 @@
+import { TTNewButton } from '@TalTech-IT/styleguide';
 import { useNavigate } from 'react-router-dom';
 import { getRuumideSummary } from '../../BronStatisticsService';
 import { downloadCsv } from '../../csv';
 
 function pct(v) { return (+v).toFixed(1) + '%'; }
+
+// Veeru päiste selgitused — kuvatakse <th title="..."> tooltipina
+const COL_LEGEND = {
+    broneeritud: 'Broneeritud % = broneeritud tunnid ÷ (perioodi päevad × 14 h) × 100\nNäitab kui suur osa tööajast on ruum broneeritud',
+    tegelik: 'Tegelik % = andurpositiivsed tunnid ÷ avatud tunnid × 100\nNäitab tegelikku ruumikasutust anduriandmete põhjal',
+    tuhistamised: 'Tühistamisi = ruumile perioodil registreeritud tühistamiste arv',
+};
 
 export default function StatistikaRuumid({ filters = {} }) {
     const navigate = useNavigate();
@@ -23,14 +31,29 @@ export default function StatistikaRuumid({ filters = {} }) {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '.75rem' }}>
-                <button className="bron-btn bron-btn-secondary bron-btn-sm" onClick={exportCsv}>⬇ Ekspordi CSV</button>
+                <TTNewButton variant="outline" size="sm" onClick={exportCsv}>
+                    <span className="material-icons" style={{ fontSize: '.9rem', marginRight: '.3rem' }}>download</span>
+                    Ekspordi CSV
+                </TTNewButton>
             </div>
             <div className="bron-table-wrap">
                 <table className="bron-table">
                     <thead>
                         <tr>
-                            <th>Ruum</th><th>Tüüp</th><th>Hoone</th><th>Kohti</th>
-                            <th>Broneeringuid</th><th>Broneeritud %</th><th>Tegelik %</th><th>Tühistamisi</th>
+                            <th>Ruum</th>
+                            <th>Tüüp</th>
+                            <th>Hoone</th>
+                            <th>Kohti</th>
+                            <th>Broneeringuid</th>
+                            <th title={COL_LEGEND.broneeritud} style={{ cursor: 'help' }}>
+                                Broneeritud % ⓘ
+                            </th>
+                            <th title={COL_LEGEND.tegelik} style={{ cursor: 'help' }}>
+                                Tegelik % ⓘ
+                            </th>
+                            <th title={COL_LEGEND.tuhistamised} style={{ cursor: 'help' }}>
+                                Tühistamisi ⓘ
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,3 +83,4 @@ export default function StatistikaRuumid({ filters = {} }) {
         </div>
     );
 }
+
