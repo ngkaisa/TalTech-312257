@@ -24,6 +24,16 @@ const KORDUV_OPTS = [
     { value: 'monthly', label: 'Iga kuu' },
 ];
 
+// Varustuse filtri valikud — vastavad searchRooms() omadused-filterile
+const VARUSTUS_OPTS = [
+    { code: 'arvutid',  label: 'Arvutid' },
+    { code: 'labor',    label: 'Labor' },
+    { code: 'sport',    label: 'Spordiruum' },
+    { code: 'saun',     label: 'Saun' },
+    { code: 'tookoda',  label: 'Töökoda' },
+    { code: 'suur',     label: '200+ kohta' },
+];
+
 function generateDates(kuupaev, korduvus, arv) {
     if (!kuupaev || !korduvus) return [kuupaev].filter(Boolean);
     const stepMap = { daily: 1, weekly: 7, biweekly: 14, monthly: 30 };
@@ -57,11 +67,19 @@ export default function OtsiRuumi() {
     });
 
     const [filters, setFilters] = useState({
-        hoone: '', ruumitypp: '', min_kohti: '', otsing: '',
+        hoone: '', ruumitypp: '', min_kohti: '', max_kohti: '', otsing: '', omadused: [],
     });
 
     function setS(key, val) { setSearch(s => ({ ...s, [key]: val })); }
     function setF(key, val) { setFilters(f => ({ ...f, [key]: val })); }
+    function toggleOmadus(code) {
+        setFilters(f => ({
+            ...f,
+            omadused: f.omadused.includes(code)
+                ? f.omadused.filter(o => o !== code)
+                : [...f.omadused, code],
+        }));
+    }
 
     const results = useMemo(() => searchRooms(filters), [filters]);
 
@@ -110,111 +128,155 @@ export default function OtsiRuumi() {
                 </div>
             </div>
 
-            {/* ── Otsingukaart ── */}
+            {/* ── Otsingukaart — kahe-veerupaigutus ── */}
             <div className="bron-card" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
-                {/* Rida 1: aeg + korduv toggle */}
-                <div className="bron-search-row" style={{ marginBottom: '1rem' }}>
-                    <div className="bron-form-group" style={{ minWidth: 150 }}>
-                        <label>Kuupäev</label>
-                        <input type="date" value={search.kuupaev} min="2026-08-01" max="2026-12-31"
-                            onChange={e => setS('kuupaev', e.target.value)} />
-                    </div>
-                    <div className="bron-form-group" style={{ minWidth: 110 }}>
-                        <label>Algusaeg</label>
-                        <select value={search.kellaaeg} onChange={e => setS('kellaaeg', Number(e.target.value))}>
-                            {KELLAAEG_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                    </div>
-                    <div className="bron-form-group" style={{ minWidth: 110 }}>
-                        <label>Kestus</label>
-                        <select value={search.kestus} onChange={e => setS('kestus', Number(e.target.value))}>
-                            {KESTUS_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                    </div>
-                    <div style={{ paddingBottom: '2px' }}>
-                        <TTNewButton
-                            type="button"
-                            variant={search.korduv ? 'primary' : 'outline'}
-                            size="sm"
-                            onClick={() => setS('korduv', !search.korduv)}
-                        >
-                            Korduv
-                        </TTNewButton>
-                    </div>
-                </div>
-
-                {/* Korduvuse seaded */}
-                {search.korduv && (
-                    <div style={{
-                        background: 'var(--tt-purple-100)',
-                        borderRadius: 8,
-                        padding: '1rem',
-                        marginBottom: '1rem',
-                    }}>
-                        <div className="bron-search-row" style={{ marginBottom: '.75rem' }}>
-                            <div className="bron-form-group" style={{ minWidth: 160 }}>
-                                <label>Sagedus</label>
-                                <select value={search.korduvus} onChange={e => setS('korduvus', e.target.value)}>
-                                    {KORDUV_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {/* ── Vasak veerg: Ürituse toimumise aeg ── */}
+                    <div>
+                        <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--tt-purple-500)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.75rem' }}>
+                            Ürituse toimumise aeg
+                        </div>
+                        <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                            <div className="bron-form-group" style={{ minWidth: 140 }}>
+                                <label>Kuupäev</label>
+                                <input type="date" value={search.kuupaev} min="2026-08-01" max="2026-12-31"
+                                    onChange={e => setS('kuupaev', e.target.value)} />
+                            </div>
+                            <div className="bron-form-group" style={{ minWidth: 100 }}>
+                                <label>Algus</label>
+                                <select value={search.kellaaeg} onChange={e => setS('kellaaeg', Number(e.target.value))}>
+                                    {KELLAAEG_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </select>
                             </div>
-                            <div className="bron-form-group" style={{ minWidth: 120 }}>
-                                <label>Korduste arv</label>
-                                <input type="number" min="2" max="52" value={search.korduvus_arv}
-                                    onChange={e => setS('korduvus_arv', e.target.value)} />
+                            <div className="bron-form-group" style={{ minWidth: 100 }}>
+                                <label>Lõpp</label>
+                                <select value={search.kestus} onChange={e => setS('kestus', Number(e.target.value))}>
+                                    {KESTUS_OPTS.map(o => (
+                                        <option key={o.value} value={o.value}>
+                                            {fmtMins(search.kellaaeg + o.value * 60)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ paddingBottom: '2px' }}>
+                                <TTNewButton
+                                    type="button"
+                                    variant={search.korduv ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setS('korduv', !search.korduv)}
+                                >
+                                    {search.korduv ? '✓ Kordub' : '+ Lisa kordus'}
+                                </TTNewButton>
                             </div>
                         </div>
-                        <div>
-                            <span style={{ fontSize: '.78rem', fontWeight: 600, color: 'var(--tt-purple-500)', marginRight: '.5rem' }}>
-                                Otsin ruume, mis on vabad {searchDates.length}× ({fmtMins(search.kellaaeg)}–{fmtMins(endMin)}):
-                            </span>
-                            {searchDates.slice(0, 8).map(d => (
-                                <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem', marginRight: '.25rem' }}>
-                                    {new Date(d).toLocaleDateString('et-EE', { day: '2-digit', month: '2-digit' })}
-                                </Badge>
+
+                        {/* Korduvuse seaded */}
+                        {search.korduv && (
+                            <div style={{ background: 'var(--tt-purple-100)', borderRadius: 8, padding: '.75rem', marginTop: '.75rem' }}>
+                                <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+                                    <div className="bron-form-group" style={{ minWidth: 150 }}>
+                                        <label>Sagedus</label>
+                                        <select value={search.korduvus} onChange={e => setS('korduvus', e.target.value)}>
+                                            {KORDUV_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="bron-form-group" style={{ minWidth: 100 }}>
+                                        <label>Korduste arv</label>
+                                        <input type="number" min="2" max="52" value={search.korduvus_arv}
+                                            onChange={e => setS('korduvus_arv', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.25rem', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '.75rem', color: 'var(--tt-purple-500)', fontWeight: 600, marginRight: '.25rem' }}>
+                                        {searchDates.length}× ({fmtMins(search.kellaaeg)}–{fmtMins(endMin)}):
+                                    </span>
+                                    {searchDates.slice(0, 6).map(d => (
+                                        <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem' }}>
+                                            {new Date(d).toLocaleDateString('et-EE', { day: '2-digit', month: '2-digit' })}
+                                        </Badge>
+                                    ))}
+                                    {searchDates.length > 6 && (
+                                        <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>+{searchDates.length - 6} veel</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Parem veerg: Ruumi info ── */}
+                    <div>
+                        <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--tt-purple-500)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.75rem' }}>
+                            Ruumi info
+                        </div>
+
+                        {/* Rida 1: otsing + hoone */}
+                        <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+                            <div className="bron-form-group" style={{ flex: 1, minWidth: 140 }}>
+                                <label>Otsing</label>
+                                <input type="text" placeholder="Ruumi kood, hoone..." value={filters.otsing}
+                                    onChange={e => setF('otsing', e.target.value)} />
+                            </div>
+                            <div className="bron-form-group" style={{ minWidth: 150 }}>
+                                <label>Hoone</label>
+                                <select value={filters.hoone} onChange={e => setF('hoone', e.target.value)}>
+                                    <option value="">Kõik hooned</option>
+                                    {HOONED.map(h => <option key={h.code} value={h.code}>{h.code} — {h.name.split('—')[1]?.trim()}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Rida 2: ruumitüüp + kohtade vahemik */}
+                        <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+                            <div className="bron-form-group" style={{ minWidth: 160 }}>
+                                <label>Ruumitüüp</label>
+                                <select value={filters.ruumitypp} onChange={e => setF('ruumitypp', e.target.value)}>
+                                    <option value="">Kõik tüübid</option>
+                                    {RUUMITYYBID.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="bron-form-group" style={{ minWidth: 80 }}>
+                                <label>Kohti alates</label>
+                                <input type="number" min="1" placeholder="min" value={filters.min_kohti}
+                                    onChange={e => setF('min_kohti', e.target.value)} />
+                            </div>
+                            <div className="bron-form-group" style={{ minWidth: 80 }}>
+                                <label>Kuni</label>
+                                <input type="number" min="1" placeholder="max" value={filters.max_kohti}
+                                    onChange={e => setF('max_kohti', e.target.value)} />
+                            </div>
+                        </div>
+
+                        {/* Rida 3: varustus checkboxid + tühjenda */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '.75rem', color: '#6b7280', fontWeight: 600, marginRight: '.15rem' }}>Varustus:</span>
+                            {VARUSTUS_OPTS.map(v => (
+                                <label key={v.code} style={{
+                                    display: 'flex', alignItems: 'center', gap: '.25rem',
+                                    fontSize: '.78rem', cursor: 'pointer', userSelect: 'none',
+                                    padding: '.2rem .5rem', borderRadius: 20,
+                                    background: filters.omadused.includes(v.code) ? 'var(--tt-purple-500)' : '#f3f4f6',
+                                    color: filters.omadused.includes(v.code) ? '#fff' : '#374151',
+                                    fontWeight: filters.omadused.includes(v.code) ? 600 : 400,
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.omadused.includes(v.code)}
+                                        onChange={() => toggleOmadus(v.code)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    {v.label}
+                                </label>
                             ))}
-                            {searchDates.length > 8 && (
-                                <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>+{searchDates.length - 8} veel</span>
-                            )}
+                            <TTNewButton
+                                variant="outline"
+                                size="sm"
+                                style={{ marginLeft: 'auto' }}
+                                onClick={() => setFilters({ hoone: '', ruumitypp: '', min_kohti: '', max_kohti: '', otsing: '', omadused: [] })}>
+                                Tühjenda
+                            </TTNewButton>
                         </div>
                     </div>
-                )}
-
-                {/* Rida 2: filtrid */}
-                <div className="bron-search-row" style=
-                    {{ paddingTop: '1rem', borderTop: '1px solid var(--tt-border)' }}>
-                    <div className="bron-form-group" style={{ minWidth: 160 }}>
-                        <label>Hoone</label>
-                        <select value={filters.hoone} onChange={e => setF('hoone', e.target.value)}>
-                            <option value="">Kõik hooned</option>
-                            {HOONED.map(h => <option key={h.code} value={h.code}>{h.code} — {h.name.split('—')[1]?.trim()}</option>)}
-                        </select>
-                    </div>
-                    <div className="bron-form-group" style={{ minWidth: 180 }}>
-                        <label>Ruumitüüp</label>
-                        <select value={filters.ruumitypp} onChange={e => setF('ruumitypp', e.target.value)}>
-                            <option value="">Kõik tüübid</option>
-                            {RUUMITYYBID.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
-                        </select>
-                    </div>
-                    <div className="bron-form-group" style={{ minWidth: 110 }}>
-                        <label>Min kohti</label>
-                        <input type="number" min="1" placeholder="nt 20" value={filters.min_kohti}
-                            onChange={e => setF('min_kohti', e.target.value)} />
-                    </div>
-                    <div className="bron-form-group" style={{ minWidth: 180, flex: 1 }}>
-                        <label>Otsing</label>
-                        <input type="text" placeholder="Ruumi kood..." value={filters.otsing}
-                            onChange={e => setF('otsing', e.target.value)} />
-                    </div>
-                    <TTNewButton
-                        variant="outline"
-                        size="sm"
-                        style={{ alignSelf: 'flex-end' }}
-                        onClick={() => setFilters({ hoone: '', ruumitypp: '', min_kohti: '', otsing: '' })}>
-                        Tühjenda
-                    </TTNewButton>
                 </div>
             </div>
 

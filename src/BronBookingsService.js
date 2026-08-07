@@ -201,6 +201,9 @@ export function searchRooms(query = {}) {
     if (query.min_kohti) {
         results = results.filter((r) => r.kohti >= query.min_kohti);
     }
+    if (query.max_kohti) {
+        results = results.filter((r) => r.kohti <= query.max_kohti);
+    }
     if (query.otsing) {
         const q = query.otsing.toLowerCase();
         results = results.filter((r) => r.code.toLowerCase().includes(q) || r.hoone_name.toLowerCase().includes(q));
