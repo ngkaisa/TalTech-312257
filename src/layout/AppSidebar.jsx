@@ -33,10 +33,17 @@ export default function AppSidebar() {
                     <NavItem to="/otsi-ruumi" icon="search" label="Otsi ruumi" />
                 </>}
 
-                {canSeeOwnBookings && <>
+                {canSeeOwnBookings && !canSeeFullStatistics && <>
                     <Section label="Minu" />
                     <NavItem to="/broneeringud" icon="event" label="Minu broneeringud" />
                     <NavItem to="/taotlused"    icon="description" label="Minu taotlused" />
+                </>}
+
+                {canSeeOwnBookings && canSeeFullStatistics && <>
+                    <Section label="Minu" />
+                    <NavItem to="/broneeringud" icon="event" label="Minu broneeringud" />
+                    <Section label="Haldus" />
+                    <NavItem to="/taotlused" icon="rule" label="Broneeringute haldus" />
                 </>}
 
                 {isExt && !canSeeOwnBookings && <>

@@ -48,9 +48,13 @@ export default function AppTopbar() {
     // Navigatsioonilingid — role-aware
     const navItems = [
         { children: 'Otsi ruumi', href: '/otsi-ruumi' },
-        ...(canSeeOwnBookings ? [
+        ...(canSeeOwnBookings && !canSeeFullStatistics ? [
             { children: 'Broneeringud', href: '/broneeringud' },
             { children: 'Taotlused',    href: '/taotlused' },
+        ] : []),
+        ...(canSeeOwnBookings && canSeeFullStatistics ? [
+            { children: 'Broneeringud', href: '/broneeringud' },
+            { children: 'Broneeringute haldus', href: '/taotlused' },
         ] : []),
         ...(isExt && !canSeeOwnBookings ? [
             { children: 'Taotlused', href: '/taotlused' },

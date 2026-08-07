@@ -1,7 +1,7 @@
 import { Badge, StatusTag, TabPanel, Tabs, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllBookings, getMyBookings } from '../../BronBookingsService';
+import { getMyBookings } from '../../BronBookingsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
 import StaatusKaart from '../../components/bron/StaatusKaart';
@@ -137,13 +137,12 @@ function BroneeringRida({ b, onCancel, cancelledId, showUser = false }) {
 }
 
 export default function MinuBroneeringud() {
-    const { currentRole, canSeeOwnBookings, isSuper } = useRole();
+    const { currentRole, canSeeOwnBookings } = useRole();
     const [activeTab, setActiveTab] = useState(0);
     const [cancelledIds, setCancelledIds] = useState(new Set());
     const [tyhistamisModaal, setTyhistamisModaal] = useState(null); // broneering objekt
 
     const myBookings = useMemo(() => getMyBookings(currentRole), [currentRole]);
-    const allBookings = useMemo(() => isSuper ? getAllBookings() : [], [isSuper]);
 
     if (!canSeeOwnBookings) return <LigipaasPuudub />;
 
@@ -157,17 +156,10 @@ export default function MinuBroneeringud() {
     const past = myBookings.filter(b => !isUpcoming(b));
     const shownMy = activeTab === 1 ? past : upcoming;
 
-    // Super: tab 2 = kõik broneeringud
-    const tabLabels = isSuper
-        ? [
-            <span>Tulevased <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{upcoming.length}</Badge></span>,
-            <span>Ajalugu <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{past.length}</Badge></span>,
-            <span>Kõik broneeringud <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>{allBookings.length}</Badge></span>,
-        ]
-        : [
-            <span>Tulevased <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{upcoming.length}</Badge></span>,
-            <span>Ajalugu <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{past.length}</Badge></span>,
-        ];
+    const tabLabels = [
+        <span>Tulevased <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{upcoming.length}</Badge></span>,
+        <span>Ajalugu <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{past.length}</Badge></span>,
+    ];
 
     const thead = (showUser) => (
         <thead>
@@ -208,12 +200,7 @@ export default function MinuBroneeringud() {
             <div className="bron-page-header">
                 <div>
                     <h1>Minu broneeringud</h1>
-                    <p>
-                        {isSuper
-                            ? 'Sinu broneeringud ja kõigi kasutajate broneeringud. §1.1.1: superkasutaja võib muuta ja tühistada teiste broneeringuid.'
-                            : 'Sinu kinnitatud broneeringud. Vali „Muuda" muutmiseks või „Tühista" aja vabastamiseks.'
-                        }
-                    </p>
+                    <p>Sinu kinnitatud broneeringud. Vali „Muuda" muutmiseks või „Tühista" aja vabastamiseks.</p>
                 </div>
                 <TTNewButton as={Link} to="/otsi-ruumi" variant="primary">+ Uus broneering</TTNewButton>
             </div>
@@ -226,7 +213,6 @@ export default function MinuBroneeringud() {
             >
                 <TabPanel>{renderTable(shownMy)}</TabPanel>
                 <TabPanel>{renderTable(shownMy)}</TabPanel>
-                {isSuper && <TabPanel>{renderTable(allBookings, true)}</TabPanel>}
             </Tabs>
         </div>
     );

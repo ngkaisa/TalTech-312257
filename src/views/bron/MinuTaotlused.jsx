@@ -1,7 +1,7 @@
 import { Badge, TabPanel, Tabs, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllRequests, getMyRequests } from '../../BronBookingsService';
+import { getAllBookings, getAllRequests, getMyRequests } from '../../BronBookingsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
 import StaatusKaart from '../../components/bron/StaatusKaart';
@@ -23,25 +23,27 @@ export default function MinuTaotlused() {
 
     const myReqs = useMemo(() => getMyRequests(currentRole), [currentRole]);
     const allReqs = useMemo(() => getAllRequests(), []);
+    const allBookings = useMemo(() => canSeeFullStatistics ? getAllBookings() : [], [canSeeFullStatistics]);
 
     if (!isLoggedIn) return <LigipaasPuudub />;
 
-    const pendingCount = allReqs.filter(r => r.seis === 'menetlusel').length;
-    const shown = (canSeeFullStatistics && activeTab === 1) ? allReqs : myReqs;
+    const pendingReqs = allReqs.filter(r => r.seis === 'menetlusel');
 
     function doAction(id, act) { setActionId(id); setAction(act); }
 
+    // Haldur/Super: 2 tabi — Menetlusel + Kõik broneeringud
+    // Tavakasutaja: 1 tab — Minu taotlused
     const tabLabels = canSeeFullStatistics
         ? [
-            <span>Minu taotlused <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{myReqs.length}</Badge></span>,
-            <span>Kõik menetlusel <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>{pendingCount}</Badge></span>,
+            <span>Menetlusel <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>{pendingReqs.length}</Badge></span>,
+            <span>Kõik broneeringud <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{allBookings.length}</Badge></span>,
           ]
         : [
             <span>Minu taotlused <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{myReqs.length}</Badge></span>,
           ];
 
-    function renderTable(rows) {
-        if (rows.length === 0) return <div className="bron-empty"><h3>Taotlusi pole</h3></div>;
+    function renderTable(rows, showMeta = false, showActions = false, emptyLabel = 'Kirjeid pole') {
+        if (rows.length === 0) return <div className="bron-empty"><h3>{emptyLabel}</h3></div>;
         return (
             <div className="bron-table-wrap">
                 <table className="bron-table">
@@ -50,10 +52,10 @@ export default function MinuTaotlused() {
                             <th>Ruum</th>
                             <th>Algus</th>
                             <th>Sündmus</th>
-                            {canSeeFullStatistics && <th>Taotleja</th>}
-                            <th>Esitatud</th>
+                            {showMeta && <th>Taotleja / kasutaja</th>}
+                            <th>{showMeta ? 'Esitatud' : 'Esitatud'}</th>
                             <th>Seis</th>
-                            {canSeeFullStatistics && <th>Tegevused</th>}
+                            {showActions && <th>Tegevused</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -62,22 +64,22 @@ export default function MinuTaotlused() {
                                 <td><strong>{r.ruum}</strong><br /><span style={{ fontSize: '.75rem', color: '#9ca3af' }}>{r.hoone}</span></td>
                                 <td>{fmt(r.algus)}</td>
                                 <td>{r.syndmus_label}</td>
-                                {canSeeFullStatistics && (
+                                {showMeta && (
                                     <td>
-                                        <div style={{ fontSize: '.85rem' }}>{r.taotleja_nimi}</div>
-                                        <div style={{ fontSize: '.75rem', color: '#6b7280' }}>{r.taotleja_org}</div>
+                                        <div style={{ fontSize: '.85rem' }}>{r.taotleja_nimi ?? r.kasutaja_nimi ?? '—'}</div>
+                                        <div style={{ fontSize: '.75rem', color: '#6b7280' }}>{r.taotleja_org ?? r.kasutaja_roll ?? ''}</div>
                                     </td>
                                 )}
-                                <td>{fmtDate(r.esitatud)}</td>
+                                <td>{fmtDate(r.esitatud ?? r.algus)}</td>
                                 <td>
                                     {actionId === r.id
                                         ? <StaatusKaart staatus={action === 'kinnita' ? 'kinnitatud' : 'tagasi_lykatud'} />
-                                        : <StaatusKaart staatus={r.seis} />
+                                        : <StaatusKaart staatus={r.seis ?? r.staatus} />
                                     }
                                 </td>
-                                {canSeeFullStatistics && (
+                                {showActions && (
                                     <td>
-                                        {r.seis === 'menetlusel' && actionId !== r.id && (
+                                        {(r.seis === 'menetlusel') && actionId !== r.id && (
                                             <div style={{ display: 'flex', gap: '.4rem' }}>
                                                 <TTNewButton variant="primary" size="sm" onClick={() => doAction(r.id, 'kinnita')}>Kinnita</TTNewButton>
                                                 <TTNewButton variant="danger" size="sm" onClick={() => doAction(r.id, 'lykka')}>Lükka tagasi</TTNewButton>
@@ -95,12 +97,12 @@ export default function MinuTaotlused() {
 
     return (
         <div className="bron-page">
-            <BronBreadcrumbs items={[{ label: 'Avaleht', to: '/' }, { label: 'Taotlused' }]} />
+            <BronBreadcrumbs items={[{ label: 'Avaleht', to: '/' }, { label: canSeeFullStatistics ? 'Broneeringute haldus' : 'Taotlused' }]} />
             <div className="bron-page-header">
                 <div>
-                    <h1>{canSeeFullStatistics ? 'Taotluste menetlus' : 'Minu taotlused'}</h1>
+                    <h1>{canSeeFullStatistics ? 'Broneeringute haldus' : 'Minu taotlused'}</h1>
                     <p>{canSeeFullStatistics
-                        ? 'Vaata ja menetle saabunud broneerimisteateid.'
+                        ? 'Menetle saabunud taotlusi ja vaata kõiki kinnitatud broneeringuid.'
                         : 'Sinu esitatud broneeringutaotlused ja nende menetlusolek.'
                     }</p>
                 </div>
@@ -115,8 +117,15 @@ export default function MinuTaotlused() {
                 selectedIndex={activeTab}
                 onSelect={setActiveTab}
             >
-                <TabPanel>{renderTable(shown)}</TabPanel>
-                {canSeeFullStatistics && <TabPanel>{renderTable(shown)}</TabPanel>}
+                {canSeeFullStatistics
+                    ? <>
+                        {/* Tab 0: Menetlusel — vajab otsust */}
+                        <TabPanel>{renderTable(pendingReqs, true, true, 'Menetlusel taotlusi pole')}</TabPanel>
+                        {/* Tab 1: Kõik broneeringud — info teiste kinnitatud broneeringutest */}
+                        <TabPanel>{renderTable(allBookings.map(b => ({ ...b, seis: b.staatus })), true, false, 'Broneeringuid pole')}</TabPanel>
+                      </>
+                    : <TabPanel>{renderTable(myReqs, false, false, 'Taotlusi pole')}</TabPanel>
+                }
             </Tabs>
         </div>
     );
