@@ -21,6 +21,7 @@ export function getMyBookings(role = 'TUDENG') {
             const ruum = RUUMID.find((r) => r.id === b.ruum_id);
             return {
                 id: b.id,
+                ruum_id: b.ruum_id,
                 ruum: ruum ? ruum.code : '—',
                 hoone: ruum ? ruum.hoone_name : '—',
                 ruumitypp_label: ruum ? ruum.ruumitypp_label : '—',
@@ -28,7 +29,50 @@ export function getMyBookings(role = 'TUDENG') {
                 lopp: b.lopp,
                 staatus: b.staatus,
                 syndmus_label: b.syndmus_label,
-                kestus_h: b.kestus_h
+                syndmus: b.syndmus,
+                kestus_h: b.kestus_h,
+                allikas: b.allikas,
+            };
+        })
+        .sort((a, b) => (a.algus < b.algus ? 1 : -1));
+}
+
+// Kasutajanimed admin-vaate jaoks (demo)
+const DEMO_KASUTAJAD = [
+    'Mart Saar', 'Liisa Kask', 'Anna Lepp', 'Eve Kivi', 'Tiiu Mets',
+    'Heli Nurm', 'Karl Tamm', 'Piret Mägi', 'Jüri Oja', 'Siret Kell',
+];
+
+/**
+ * §1.1.1 — Superkasutaja näeb KÕIKI broneeringuid ja saab tühistada ükskõik millist.
+ * Tagastab suurema alamhulga kõigist broneeringutest (mitte-ghost) rikastatult kasutajanimedega.
+ */
+export function getAllBookings() {
+    const active = BRONEERINGUD.filter(b =>
+        b.staatus !== BRONEERINGU_STAATUS.GHOST
+    );
+
+    return active
+        .slice(0, 40)
+        .map((b, idx) => {
+            const ruum = RUUMID.find((r) => r.id === b.ruum_id);
+            return {
+                id: b.id,
+                ruum_id: b.ruum_id,
+                ruum: ruum ? ruum.code : '—',
+                hoone: ruum ? ruum.hoone_name : '—',
+                ruumitypp_label: ruum ? ruum.ruumitypp_label : '—',
+                algus: b.algus,
+                lopp: b.lopp,
+                staatus: b.staatus,
+                syndmus_label: b.syndmus_label,
+                syndmus: b.syndmus,
+                kestus_h: b.kestus_h,
+                allikas: b.allikas,
+                kasutaja_roll: b.kasutaja_roll,
+                kasutaja_nimi: b.allikas === 'tunniplaan'
+                    ? '— (Tunniplaan)'
+                    : DEMO_KASUTAJAD[idx % DEMO_KASUTAJAD.length],
             };
         })
         .sort((a, b) => (a.algus < b.algus ? 1 : -1));

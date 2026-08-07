@@ -1,4 +1,6 @@
+import { Badge, TabPanel, Tabs, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getAllRequests, getMyRequests } from '../../BronBookingsService';
 import BronBreadcrumbs from '../../components/bron/BronBreadcrumbs';
 import LigipaasPuudub from '../../components/bron/LigipaasPuudub';
@@ -15,7 +17,7 @@ function fmtDate(iso) {
 
 export default function MinuTaotlused() {
     const { currentRole, isLoggedIn, isExt, isTudeng, isTootaja, canSeeFullStatistics } = useRole();
-    const [activeTab, setActiveTab] = useState('mine');
+    const [activeTab, setActiveTab] = useState(0);
     const [actionId, setActionId] = useState(null);
     const [action, setAction] = useState(null);
 
@@ -24,9 +26,72 @@ export default function MinuTaotlused() {
 
     if (!isLoggedIn) return <LigipaasPuudub />;
 
-    const shown = (canSeeFullStatistics && activeTab === 'all') ? allReqs : myReqs;
+    const pendingCount = allReqs.filter(r => r.seis === 'menetlusel').length;
+    const shown = (canSeeFullStatistics && activeTab === 1) ? allReqs : myReqs;
 
     function doAction(id, act) { setActionId(id); setAction(act); }
+
+    const tabLabels = canSeeFullStatistics
+        ? [
+            <span>Minu taotlused <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{myReqs.length}</Badge></span>,
+            <span>Kõik menetlusel <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>{pendingCount}</Badge></span>,
+          ]
+        : [
+            <span>Minu taotlused <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>{myReqs.length}</Badge></span>,
+          ];
+
+    function renderTable(rows) {
+        if (rows.length === 0) return <div className="bron-empty"><h3>Taotlusi pole</h3></div>;
+        return (
+            <div className="bron-table-wrap">
+                <table className="bron-table">
+                    <thead>
+                        <tr>
+                            <th>Ruum</th>
+                            <th>Algus</th>
+                            <th>Sündmus</th>
+                            {canSeeFullStatistics && <th>Taotleja</th>}
+                            <th>Esitatud</th>
+                            <th>Seis</th>
+                            {canSeeFullStatistics && <th>Tegevused</th>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(r => (
+                            <tr key={r.id}>
+                                <td><strong>{r.ruum}</strong><br /><span style={{ fontSize: '.75rem', color: '#9ca3af' }}>{r.hoone}</span></td>
+                                <td>{fmt(r.algus)}</td>
+                                <td>{r.syndmus_label}</td>
+                                {canSeeFullStatistics && (
+                                    <td>
+                                        <div style={{ fontSize: '.85rem' }}>{r.taotleja_nimi}</div>
+                                        <div style={{ fontSize: '.75rem', color: '#6b7280' }}>{r.taotleja_org}</div>
+                                    </td>
+                                )}
+                                <td>{fmtDate(r.esitatud)}</td>
+                                <td>
+                                    {actionId === r.id
+                                        ? <StaatusKaart staatus={action === 'kinnita' ? 'kinnitatud' : 'tagasi_lykatud'} />
+                                        : <StaatusKaart staatus={r.seis} />
+                                    }
+                                </td>
+                                {canSeeFullStatistics && (
+                                    <td>
+                                        {r.seis === 'menetlusel' && actionId !== r.id && (
+                                            <div style={{ display: 'flex', gap: '.4rem' }}>
+                                                <TTNewButton variant="primary" size="sm" onClick={() => doAction(r.id, 'kinnita')}>Kinnita</TTNewButton>
+                                                <TTNewButton variant="danger" size="sm" onClick={() => doAction(r.id, 'lykka')}>Lükka tagasi</TTNewButton>
+                                            </div>
+                                        )}
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    }
 
     return (
         <div className="bron-page">
@@ -40,75 +105,19 @@ export default function MinuTaotlused() {
                     }</p>
                 </div>
                 {(isTudeng || isTootaja || isExt) && (
-                    <a href="/otsi-ruumi" className="bron-btn bron-btn-primary">+ Uus taotlus</a>
+                    <TTNewButton as={Link} to="/otsi-ruumi" variant="primary">+ Uus taotlus</TTNewButton>
                 )}
             </div>
 
-            {canSeeFullStatistics && (
-                <div className="bron-tabs">
-                    <button className={`bron-tab ${activeTab === 'mine' ? 'active' : ''}`} onClick={() => setActiveTab('mine')}>
-                        Minu taotlused
-                    </button>
-                    <button className={`bron-tab ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>
-                        Kõik menetlusel <span className="bron-badge bron-badge--warn" style={{ marginLeft: '.4rem' }}>{allReqs.filter(r => r.seis === 'menetlusel').length}</span>
-                    </button>
-                </div>
-            )}
-
-            {shown.length === 0
-                ? <div className="bron-empty"><h3>Taotlusi pole</h3></div>
-                : (
-                    <div className="bron-table-wrap">
-                        <table className="bron-table">
-                            <thead>
-                                <tr>
-                                    <th>Ruum</th>
-                                    <th>Algus</th>
-                                    <th>Sündmus</th>
-                                    {canSeeFullStatistics && <th>Taotleja</th>}
-                                    <th>Esitatud</th>
-                                    <th>Seis</th>
-                                    {canSeeFullStatistics && <th>Tegevused</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shown.map(r => (
-                                    <tr key={r.id}>
-                                        <td><strong>{r.ruum}</strong><br /><span style={{ fontSize: '.75rem', color: '#9ca3af' }}>{r.hoone}</span></td>
-                                        <td>{fmt(r.algus)}</td>
-                                        <td>{r.syndmus_label}</td>
-                                        {canSeeFullStatistics && (
-                                            <td>
-                                                <div style={{ fontSize: '.85rem' }}>{r.taotleja_nimi}</div>
-                                                <div style={{ fontSize: '.75rem', color: '#6b7280' }}>{r.taotleja_org}</div>
-                                            </td>
-                                        )}
-                                        <td>{fmtDate(r.esitatud)}</td>
-                                        <td>
-                                            {actionId === r.id
-                                                ? <span className={`bron-badge ${action === 'kinnita' ? 'bron-badge--success' : 'bron-badge--danger'}`}>
-                                                    {action === 'kinnita' ? '✓ Kinnitatud' : '✗ Tagasi lükatud'}
-                                                  </span>
-                                                : <StaatusKaart staatus={r.seis} />
-                                            }
-                                        </td>
-                                        {canSeeFullStatistics && (
-                                            <td>
-                                                {r.seis === 'menetlusel' && actionId !== r.id && (
-                                                    <div style={{ display: 'flex', gap: '.4rem' }}>
-                                                        <button className="bron-btn bron-btn-primary bron-btn-sm" onClick={() => doAction(r.id, 'kinnita')}>Kinnita</button>
-                                                        <button className="bron-btn bron-btn-danger bron-btn-sm" onClick={() => doAction(r.id, 'lykka')}>Lükka tagasi</button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )
-            }
+            <Tabs
+                id="taotlused-tabs"
+                labels={tabLabels}
+                selectedIndex={activeTab}
+                onSelect={setActiveTab}
+            >
+                <TabPanel>{renderTable(shown)}</TabPanel>
+                {canSeeFullStatistics && <TabPanel>{renderTable(shown)}</TabPanel>}
+            </Tabs>
         </div>
     );
 }
