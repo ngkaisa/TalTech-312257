@@ -137,7 +137,7 @@ const TABS = [
 
 function RuumiTabBar({ active, onChange }) {
     return (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--tt-border)', marginBottom: '1.5rem' }}>
+        <div className="bron-tabs" style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--tt-border)', marginBottom: '1.5rem' }}>
             {TABS.map(t => (
                 <button key={t.key} type="button"
                     onClick={() => onChange(t.key)}

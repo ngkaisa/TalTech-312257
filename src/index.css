@@ -633,3 +633,105 @@ a { color: inherit; }
 .bron-empty h3 { color: var(--tt-text-muted); margin-bottom: .5rem; }
 .bron-access-denied { text-align: center; padding: 4rem 2rem; color: var(--tt-text-muted); }
 .bron-access-denied h2 { color: var(--tt-purple-500); margin-bottom: .5rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — otsingukaardi kahe-veerupaigutus
+   ══════════════════════════════════════════════════════════════════ */
+.bron-otsi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (≤900px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .bron-sidebar { width: 180px; min-width: 180px; }
+  .bron-main { padding: 1.5rem 1.25rem; }
+  .bron-galerii__img { height: 280px; }
+  .bron-action-card { max-width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobiil (≤768px)
+   CVI Header navigatsioon töötab mobiilil — sidebar peidetud
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Sidebar peida — CVI Header käsitseb navigatsiooni mobiilil */
+  .bron-sidebar { display: none; }
+
+  /* Peamine sisu */
+  .bron-main { padding: 1rem; }
+
+  /* Lehekülje päis */
+  .bron-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .bron-page-header h1 { font-size: 1.3rem; }
+  .bron-page-header p  { font-size: .85rem; }
+
+  /* Galerii */
+  .bron-galerii__img { height: 220px; }
+  .bron-galerii__thumbs { display: none; }
+
+  /* KPI kaardid */
+  .bron-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .bron-kpi__value { font-size: 1.5rem; }
+
+  /* Kaardi ja vorm grid → 1 veerg */
+  .bron-card-grid   { grid-template-columns: 1fr; }
+  .bron-form-grid   { grid-template-columns: 1fr; }
+  .bron-form-grid > * { grid-column: 1 !important; }
+
+  /* Otsingukaardi kaks-veerupaigutus → üks veerg */
+  .bron-otsi-grid { grid-template-columns: 1fr; }
+
+  /* Toimingute kaardid */
+  .bron-quick-grid { flex-direction: column; }
+  .bron-action-card { max-width: 100%; flex: 1 1 auto; }
+
+  /* Filtrid */
+  .bron-filters { padding: .75rem; gap: .5rem; }
+
+  /* Tabelid */
+  .bron-table th,
+  .bron-table td { padding: .45rem .6rem; font-size: .8rem; }
+
+  /* Tabid — horisontaalkerime */
+  .bron-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  .bron-tab  { padding: .55rem .9rem; font-size: .8rem; flex-shrink: 0; }
+
+  /* Nupud */
+  .bron-btn { padding: .45rem 1.1rem; font-size: .83rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Väike mobiil (≤480px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .bron-main { padding: .75rem; }
+
+  .bron-page-header h1 { font-size: 1.15rem; }
+
+  /* KPI 2 veergu */
+  .bron-kpi-grid  { grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+  .bron-kpi       { padding: .85rem 1rem; }
+  .bron-kpi__value { font-size: 1.35rem; }
+
+  /* Galerii */
+  .bron-galerii__img { height: 180px; }
+
+  /* Nupud täislaius suurtes konteinerites */
+  .bron-page-header .bron-btn { width: 100%; justify-content: center; }
+
+  /* Ruumi kaardid */
+  .bron-room-card__img { height: 130px; }
+
+  /* Tabel päis kompaktsem */
+  .bron-table th { font-size: .72rem; padding: .4rem .5rem; }
+  .bron-table td { padding: .4rem .5rem; font-size: .78rem; }
+}

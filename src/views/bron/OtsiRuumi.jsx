@@ -171,7 +171,7 @@ export default function OtsiRuumi() {
 
             {/* ── Otsingukaart — kahe-veerupaigutus ── */}
             <div className="bron-card" style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div className="bron-otsi-grid">
 
                     {/* ── Vasak veerg: Ürituse toimumise aeg ── */}
                     <div>
