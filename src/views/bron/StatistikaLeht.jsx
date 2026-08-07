@@ -9,15 +9,17 @@ import { useRole } from '../../context/RoleContext';
 import StatistikaKeskkond from './StatistikaKeskkond';
 import StatistikaPopulaarsedAjad from './StatistikaPopulaarsedAjad';
 import StatistikaRuumid from './StatistikaRuumid';
+import StatistikaTagasiside from './StatistikaTagasiside';
 import StatistikaTuhistamised from './StatistikaTuhistamised';
 import StatistikaYlevaade from './StatistikaYlevaade';
 
-const TAB_KEYS = ['ylevaade', 'ruumid', 'populaarsed-ajad', 'tuhistamised', 'keskkond'];
+const TAB_KEYS = ['ylevaade', 'ruumid', 'populaarsed-ajad', 'tuhistamised', 'tagasiside', 'keskkond'];
 const TAB_LABELS = {
     ylevaade: 'Ülevaade',
     ruumid: 'Ruumide kasutus',
     'populaarsed-ajad': 'Populaarsed ajad',
     tuhistamised: 'Tühistamised',
+    tagasiside: 'Tagasiside',
     keskkond: 'Kasutajad & Keskkond',
 };
 const counts = getGlobalCounts();
@@ -50,6 +52,7 @@ export default function StatistikaLeht() {
         ruumid: <StatistikaRuumid filters={filters} />,
         'populaarsed-ajad': <StatistikaPopulaarsedAjad filters={filters} />,
         tuhistamised: <StatistikaTuhistamised filters={filters} />,
+        tagasiside: <StatistikaTagasiside filters={filters} />,
         keskkond: <StatistikaKeskkond filters={filters} />,
     };
 

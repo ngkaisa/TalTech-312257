@@ -450,6 +450,20 @@ export function getRoomFeedback(ruum_id) {
 export { RUUMITYYBID, SYNDMUSETYYBID };
 
 // ─────────────────────────────────────────────────────────────────
+// Kõikide ruumide tagasiside (statistika tabi jaoks)
+// ─────────────────────────────────────────────────────────────────
+/**
+ * Tagastab kõikide ruumide tagasiside ühe massiivina koos ruumi koodiga.
+ * Kasutatakse StatistikaTagasiside vaates.
+ */
+export function getAllFeedback(ruumid) {
+    if (!ruumid || ruumid.length === 0) return [];
+    return ruumid.flatMap(r =>
+        getRoomFeedback(r.id).map(fb => ({ ...fb, ruum_code: r.code, hoone: r.hoone, ruumitypp_label: r.ruumitypp_label }))
+    ).sort((a, b) => b.kuupaev.localeCompare(a.kuupaev));
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Tunniplaani konflikti kontroll broneerimise vormile
 // ─────────────────────────────────────────────────────────────────
 /**

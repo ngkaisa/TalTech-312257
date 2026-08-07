@@ -65,11 +65,21 @@ const KESTUS_OPTS = [
 ];
 
 const KORDUV_TYYP = [
-    { value: 'none',    label: 'Üks kord' },
-    { value: 'daily',   label: 'Iga päev' },
-    { value: 'weekly',  label: 'Iga nädal' },
-    { value: 'biweekly',label: 'Iga teine nädal' },
-    { value: 'monthly', label: 'Iga kuu' },
+    { value: 'none',     label: 'Üks kord' },
+    { value: 'daily',    label: 'Iga päev' },
+    { value: 'weekly',   label: 'Iga nädal' },
+    { value: 'biweekly', label: 'Iga teine nädal' },
+    { value: 'monthly',  label: 'Iga kuu' },
+];
+
+const NADALAP = [
+    { short: 'E', day: 1, long: 'Esmaspäev' },
+    { short: 'T', day: 2, long: 'Teisipäev' },
+    { short: 'K', day: 3, long: 'Kolmapäev' },
+    { short: 'N', day: 4, long: 'Neljapäev' },
+    { short: 'R', day: 5, long: 'Reede' },
+    { short: 'L', day: 6, long: 'Laupäev' },
+    { short: 'P', day: 0, long: 'Pühapäev' },
 ];
 
 // Ruumitüübid, kus uni-kasutaja peab esitama taotluse (mitte otsebroneering)
@@ -99,17 +109,40 @@ function addDays(dateStr, n) {
 
 function generateOccurrences(form) {
     if (form.korduvus === 'none') return [form.kuupaev];
-    const results = [form.kuupaev];
-    let cur = form.kuupaev;
     const limit = form.korduvus_lopp_tyyp === 'count'
-        ? parseInt(form.korduvus_arv, 10) - 1
-        : 52; // max safety
+        ? parseInt(form.korduvus_arv, 10)
+        : 52;
     const endDate = form.korduvus_lopp_tyyp === 'date' ? form.korduvus_lopp : null;
 
+    if ((form.korduvus === 'weekly' || form.korduvus === 'biweekly') && form.korduvus_paevad && form.korduvus_paevad.length > 0) {
+        const weekStep = form.korduvus === 'biweekly' ? 2 : 1;
+        const start = new Date(form.kuupaev);
+        const sorted = [...form.korduvus_paevad].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b));
+        const dow = start.getDay();
+        const toMon = dow === 0 ? -6 : 1 - dow;
+        const results = [];
+        let weekOffset = 0;
+        while (results.length < limit && results.length < 52 && weekOffset < 60) {
+            for (const day of sorted) {
+                const d = new Date(start);
+                const dayFromMon = day === 0 ? 6 : day - 1;
+                d.setDate(start.getDate() + toMon + weekOffset * 7 * weekStep + dayFromMon);
+                const iso = d.toISOString().slice(0, 10);
+                if (d >= start && results.length < limit && results.length < 52) {
+                    if (endDate && iso > endDate) { weekOffset = 999; break; }
+                    results.push(iso);
+                }
+            }
+            weekOffset++;
+        }
+        return results;
+    }
+
+    const results = [form.kuupaev];
+    let cur = form.kuupaev;
     const stepMap = { daily: 1, weekly: 7, biweekly: 14, monthly: 30 };
     const step = stepMap[form.korduvus] || 7;
-
-    for (let i = 0; i < limit && results.length < 52; i++) {
+    for (let i = 0; i < limit - 1 && results.length < 52; i++) {
         cur = addDays(cur, step);
         if (endDate && cur > endDate) break;
         results.push(cur);
@@ -146,9 +179,17 @@ export default function BroneeringuVorm() {
         korduvus_lopp_tyyp: 'count',
         korduvus_arv: prefill.korduvus_arv || '5',
         korduvus_lopp: '2026-12-31',
+        korduvus_paevad: prefill.korduvus_paevad || [new Date(prefill.kuupaev || '2026-08-10').getDay()],
     });
 
     function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
+    function togglePaev(day) {
+        setForm(f => {
+            const cur = f.korduvus_paevad || [];
+            const next = cur.includes(day) ? cur.filter(d => d !== day) : [...cur, day];
+            return { ...f, korduvus_paevad: next.length > 0 ? next : cur };
+        });
+    }
 
     const occurrences = useMemo(() => generateOccurrences(form), [form]);
     const isRecurring = form.korduvus !== 'none';
@@ -344,7 +385,30 @@ export default function BroneeringuVorm() {
                     </div>
 
                     {isRecurring && (
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'flex-end' }}>
+                            {/* Nädalapäevade valik — ainult weekly/biweekly */}
+                            {(form.korduvus === 'weekly' || form.korduvus === 'biweekly') && (
+                                <div className="bron-form-group">
+                                    <label>Nädalapäevad</label>
+                                    <div style={{ display: 'flex', gap: '.3rem' }}>
+                                        {NADALAP.map(({ short, day, long }) => {
+                                            const active = (form.korduvus_paevad || []).includes(day);
+                                            return (
+                                                <button key={day} type="button" title={long}
+                                                    onClick={() => togglePaev(day)}
+                                                    style={{
+                                                        width: 34, height: 34, borderRadius: 6,
+                                                        border: active ? 'none' : '1.5px solid var(--tt-purple-300)',
+                                                        background: active ? 'var(--tt-purple-500)' : 'white',
+                                                        color: active ? '#fff' : 'var(--tt-purple-500)',
+                                                        fontWeight: 700, fontSize: '.82rem', cursor: 'pointer',
+                                                    }}
+                                                >{short}</button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                             {/* Lõpp: arvu või kuupäeva järgi */}
                             <div className="bron-form-group" style={{ minWidth: 160 }}>
                                 <label>Lõppeb</label>
@@ -378,15 +442,23 @@ export default function BroneeringuVorm() {
                         } · {fmtMin(startMin)}–{fmtMin(endMin)}
                         </div>
                         <div style={{ display: 'flex', gap: '.35rem', flexWrap: 'wrap' }}>
-                            {occurrences.slice(0, 20).map((d, i) => (
-                                <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem' }}>
+                            {occurrences.slice(0, 20).map((d) => (
+                                <span key={d} style={{
+                                    display: 'inline-block', padding: '.2rem .55rem',
+                                    background: 'var(--tt-purple-200)', color: 'var(--tt-purple-700)',
+                                    borderRadius: 4, fontSize: '.78rem', fontWeight: 600,
+                                }}>
                                     {fmtDate(d)}
-                                </Badge>
+                                </span>
                             ))}
                             {occurrences.length > 20 && (
-                                <Badge color="purple" size="sm" style={{ fontSize: '.72rem' }}>
+                                <span style={{
+                                    display: 'inline-block', padding: '.2rem .55rem',
+                                    background: 'var(--tt-purple-200)', color: 'var(--tt-purple-700)',
+                                    borderRadius: 4, fontSize: '.78rem', fontWeight: 600,
+                                }}>
                                     +{occurrences.length - 20} veel
-                                </Badge>
+                                </span>
                             )}
                         </div>
                     </div>

@@ -1,6 +1,6 @@
-import { Badge, StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
+import { StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     getRoomAvailability,
     getRoomFeedback,
@@ -129,10 +129,51 @@ function TagasisideRida({ fb }) {
 
 const NOW_DISPLAY = new Date('2026-08-06T10:30:00');
 
+const TABS = [
+    { key: 'ylevaade', label: 'Ülevaade', icon: 'info' },
+    { key: 'tagasiside', label: 'Tagasiside', icon: 'star_rate' },
+    { key: 'ajalugu', label: 'Broneeringute ajalugu', icon: 'history' },
+];
+
+function RuumiTabBar({ active, onChange }) {
+    return (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--tt-border)', marginBottom: '1.5rem' }}>
+            {TABS.map(t => (
+                <button key={t.key} type="button"
+                    onClick={() => onChange(t.key)}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '.35rem',
+                        padding: '.6rem 1.1rem', border: 'none', background: 'none',
+                        borderBottom: active === t.key ? '2.5px solid var(--tt-purple-500)' : '2.5px solid transparent',
+                        marginBottom: -2, cursor: 'pointer',
+                        fontWeight: active === t.key ? 700 : 400,
+                        color: active === t.key ? 'var(--tt-purple-500)' : 'var(--tt-text-muted)',
+                        fontSize: '.92rem', whiteSpace: 'nowrap',
+                    }}
+                >
+                    <span className="material-icons" style={{ fontSize: '1rem' }}>{t.icon}</span>
+                    {t.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 export default function RuumiDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { isLoggedIn, canSeeFullStatistics } = useRole();
+
+    const queryTab = new URLSearchParams(location.search).get('tab');
+    const [activeTab, setActiveTab] = useState(
+        TABS.find(t => t.key === queryTab) ? queryTab : 'ylevaade'
+    );
+
+    function switchTab(tab) {
+        setActiveTab(tab);
+        navigate(`/ruum/${id}?tab=${tab}`, { replace: true });
+    }
 
     const room = RUUMID.find(r => r.id === id);
     if (!room) return <div className="bron-page"><h1>Ruum ei leitud</h1></div>;
@@ -182,172 +223,197 @@ export default function RuumiDetail() {
                     { label: 'Arvutikohti', value: room.arvutikohti > 0 ? `${room.arvutikohti} tk` : '—' },
                     { label: 'Hoone', value: room.hoone },
                     { label: 'Korrus', value: room.korrus },
-                    ...(feedbackAvg ? [{ label: 'Kasutajad hindavad', value: `★ ${feedbackAvg}`, sub: `${feedback.length} hinnangut` }] : []),
-                ].map(({ label, value, sub }) => (
-                    <div key={label} className="bron-kpi">
+                    ...(feedbackAvg ? [{ label: 'Kasutajad hindavad', value: `★ ${feedbackAvg}`, sub: `${feedback.length} hinnangut`, onClick: () => switchTab('tagasiside') }] : []),
+                ].map(({ label, value, sub, onClick }) => (
+                    <div key={label} className="bron-kpi" onClick={onClick} style={onClick ? { cursor: 'pointer' } : {}}>
                         <div className="bron-kpi__value" style={{ fontSize: '1.4rem' }}>{value}</div>
                         <div className="bron-kpi__label">{label}</div>
                         {sub && <div style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>{sub}</div>}
                     </div>
                 ))}
             </div>
+            {/* ── Tabid ── */}
+            <RuumiTabBar active={activeTab} onChange={switchTab} />
 
-            {/* ── Tänane graafik koos kontaktidega (super / haldur) ── */}
-            {canSeeFullStatistics && (
-                <div className="bron-card" style={{ marginBottom: '1.5rem' }}>
+            {/* ── Ülevaade ── */}
+            {activeTab === 'ylevaade' && (<>
+                {/* Tänane graafik koos kontaktidega (super / haldur) */}
+                {canSeeFullStatistics && (
+                    <div className="bron-card" style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                            <span className="material-icons" style={{ fontSize: '1.1rem' }}>contact_phone</span>
+                            Graafik ja broneerijate kontaktid (täna + homme)
+                        </h3>
+                        {schedule.length === 0 ? (
+                            <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Järgmise 2 päeva jooksul broneeringuid pole.</p>
+                        ) : (
+                            <div className="bron-table-wrap">
+                                <table className="table table-hover" style={{ fontSize: '.875rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Päev</th><th>Aeg</th><th>Sündmus</th>
+                                            <th>Broneerija</th><th>E-post</th><th>Telefon</th><th>Organisatsioon</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {schedule.map(b => {
+                                            const isNow = new Date(b.algus) <= NOW_DISPLAY && new Date(b.lopp) > NOW_DISPLAY;
+                                            const isTunniplaan = b.allikas === 'tunniplaan';
+                                            const rowBg = isTunniplaan ? '#fef3c7' : isNow ? 'var(--tt-purple-100)' : undefined;
+                                            return (
+                                                <tr key={b.id} style={rowBg ? { background: rowBg } : {}}>
+                                                    <td>{b.paev}</td>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>{b.algus_fmt}–{b.lopp_fmt}</td>
+                                                    <td>
+                                                        {b.syndmus_label}
+                                                        {isTunniplaan && (
+                                                            <span style={{ marginLeft: '.4rem', display: 'inline-block', padding: '.1rem .4rem', background: 'var(--tt-purple-200)', color: 'var(--tt-purple-700)', borderRadius: 4, fontSize: '.72rem', fontWeight: 600 }}>Tunniplaan</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ fontWeight: isNow ? 700 : 400 }}>
+                                                        {isTunniplaan ? (
+                                                            <span style={{ color: 'var(--tt-text-muted)', fontStyle: 'italic', fontSize: '.85rem' }}>
+                                                                Tunniplaan (ülimuslik)
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {b.broneerija_nimi}
+                                                                {isNow && <span style={{ marginLeft: '.4rem', display: 'inline-block', padding: '.1rem .4rem', background: 'var(--tt-pink-200, #fde8f4)', color: 'var(--tt-pink-700, #a70560)', borderRadius: 4, fontSize: '.72rem', fontWeight: 600 }}>praegu ruumis</span>}
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {!isTunniplaan && (
+                                                            <a href={`mailto:${b.broneerija_email}`} style={{ color: 'var(--tt-purple-500)' }}>
+                                                                {b.broneerija_email}
+                                                            </a>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                                        {!isTunniplaan && (
+                                                            <a href={`tel:${b.broneerija_telefon}`} style={{ color: 'var(--tt-purple-500)' }}>
+                                                                {b.broneerija_telefon}
+                                                            </a>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ fontSize: '.78rem', color: 'var(--tt-text-muted)' }}>
+                                                        {isTunniplaan ? '—' : b.broneerija_org}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {/* Ruumi kirjeldus / omadused */}
+                <div className="bron-card">
+                    <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem' }}>Ruumi omadused</h3>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {[
+                            { icon: 'people', label: 'Kohti', val: room.kohti },
+                            { icon: 'computer', label: 'Arvutikohti', val: room.arvutikohti || '—' },
+                            { icon: 'corporate_fare', label: 'Hoone', val: room.hoone_name || room.hoone },
+                            { icon: 'stairs', label: 'Korrus', val: room.korrus },
+                        ].map(({ icon, label, val }) => (
+                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.88rem' }}>
+                                <span className="material-icons" style={{ fontSize: '1rem', color: 'var(--tt-purple-400)' }}>{icon}</span>
+                                <span style={{ color: 'var(--tt-text-muted)' }}>{label}:</span>
+                                <span style={{ fontWeight: 600 }}>{val}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </>)}
+
+            {/* ── Tagasiside ── */}
+            {activeTab === 'tagasiside' && (
+                <div className="bron-card">
                     <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                        <span className="material-icons" style={{ fontSize: '1.1rem' }}>contact_phone</span>
-                        Graafik ja broneerijate kontaktid (täna + homme)
+                        <span className="material-icons" style={{ fontSize: '1.1rem' }}>star_rate</span>
+                        Kasutajate tagasiside
+                        {feedbackAvg && (
+                            <span style={{ fontWeight: 400, fontSize: '.875rem', color: 'var(--tt-text-muted)' }}>
+                                — ⌀ {feedbackAvg} · {feedback.length} hinnangut
+                            </span>
+                        )}
                     </h3>
-                    {schedule.length === 0 ? (
-                        <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Järgmise 2 päeva jooksul broneeringuid pole.</p>
+
+                    {isLoggedIn && (
+                        <div style={{ background: 'var(--tt-purple-100)', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
+                            <p style={{ margin: '0 0 .75rem', fontSize: '.85rem', fontWeight: 600, color: 'var(--tt-purple-600)' }}>
+                                Anna hinnang ruumile {room.code}
+                            </p>
+                            <TagasisideVorm ruumCode={room.code} />
+                        </div>
+                    )}
+
+                    {canSeeFullStatistics ? (
+                        feedback.length === 0
+                            ? <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Tagasisidet pole veel antud.</p>
+                            : feedback.map(fb => <TagasisideRida key={fb.id} fb={fb} />)
                     ) : (
-                        <div className="bron-table-wrap">
-                            <table className="table table-hover" style={{ fontSize: '.875rem' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Päev</th><th>Aeg</th><th>Sündmus</th>
-                                        <th>Broneerija</th><th>E-post</th><th>Telefon</th><th>Organisatsioon</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {schedule.map(b => {
-                                        const isNow = new Date(b.algus) <= NOW_DISPLAY && new Date(b.lopp) > NOW_DISPLAY;
-                                        const isTunniplaan = b.allikas === 'tunniplaan';
-                                        const rowBg = isTunniplaan ? '#fef3c7' : isNow ? 'var(--tt-purple-100)' : undefined;
+                        feedback.length > 0 && (
+                            <div>
+                                <p style={{ fontSize: '.82rem', color: 'var(--tt-text-muted)', margin: '0 0 .75rem' }}>
+                                    Põhineb {feedback.length} kasutaja hinnangul:
+                                </p>
+                                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                    {[
+                                        { key: 'temperatuur', label: 'Temperatuur' },
+                                        { key: 'puhtus',      label: 'Puhtus' },
+                                        { key: 'ohk',         label: 'Õhk / lõhnad' },
+                                        { key: 'varustus',    label: 'Varustus' },
+                                    ].map(({ key, label }) => {
+                                        const avgVal = feedback.reduce((s, f) => s + f[key], 0) / feedback.length;
                                         return (
-                                            <tr key={b.id} style={rowBg ? { background: rowBg } : {}}>
-                                                <td>{b.paev}</td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>{b.algus_fmt}–{b.lopp_fmt}</td>
-                                                <td>
-                                                    {b.syndmus_label}
-                                                    {isTunniplaan && (
-                                                        <Badge color="purple" size="sm" style={{ marginLeft: '.4rem' }}>Tunniplaan</Badge>
-                                                    )}
-                                                </td>
-                                                <td style={{ fontWeight: isNow ? 700 : 400 }}>
-                                                    {isTunniplaan ? (
-                                                        <span style={{ color: 'var(--tt-text-muted)', fontStyle: 'italic', fontSize: '.85rem' }}>
-                                                            Tunniplaan (ülimuslik)
-                                                        </span>
-                                                    ) : (
-                                                        <>
-                                                            {b.broneerija_nimi}
-                                                            {isNow && <Badge color="pink" size="sm" style={{ marginLeft: '.4rem' }}>praegu ruumis</Badge>}
-                                                        </>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {!isTunniplaan && (
-                                                        <a href={`mailto:${b.broneerija_email}`} style={{ color: 'var(--tt-purple-500)' }}>
-                                                            {b.broneerija_email}
-                                                        </a>
-                                                    )}
-                                                </td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>
-                                                    {!isTunniplaan && (
-                                                        <a href={`tel:${b.broneerija_telefon}`} style={{ color: 'var(--tt-purple-500)' }}>
-                                                            {b.broneerija_telefon}
-                                                        </a>
-                                                    )}
-                                                </td>
-                                                <td style={{ fontSize: '.78rem', color: 'var(--tt-text-muted)' }}>
-                                                    {isTunniplaan ? '—' : b.broneerija_org}
-                                                </td>
-                                            </tr>
+                                            <StarRating
+                                                key={key}
+                                                value={Math.round(avgVal)}
+                                                label={`${label} (⌀ ${avgVal.toFixed(1)})`}
+                                            />
                                         );
                                     })}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
+                            </div>
+                        )
                     )}
                 </div>
             )}
 
-            {/* ── Tagasiside ── */}
-            <div className="bron-card" style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                    <span className="material-icons" style={{ fontSize: '1.1rem' }}>star_rate</span>
-                    Kasutajate tagasiside
-                    {feedbackAvg && (
-                        <span style={{ fontWeight: 400, fontSize: '.875rem', color: 'var(--tt-text-muted)' }}>
-                            — ⌀ {feedbackAvg} · {feedback.length} hinnangut
-                        </span>
-                    )}
-                </h3>
-
-                {/* Tagasiside saatmisvorm kõigile sisselogitud kasutajatele */}
-                {isLoggedIn && (
-                    <div style={{ background: 'var(--tt-purple-100)', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
-                        <p style={{ margin: '0 0 .75rem', fontSize: '.85rem', fontWeight: 600, color: 'var(--tt-purple-600)' }}>
-                            Anna hinnang ruumile {room.code}
-                        </p>
-                        <TagasisideVorm ruumCode={room.code} />
-                    </div>
-                )}
-
-                {/* Super/haldur näeb kõiki hinnanguid nimedega */}
-                {canSeeFullStatistics ? (
-                    feedback.length === 0
-                        ? <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Tagasisidet pole veel antud.</p>
-                        : feedback.map(fb => <TagasisideRida key={fb.id} fb={fb} />)
-                ) : (
-                    /* Teistele kasutajatele: anonüümsed keskmised */
-                    feedback.length > 0 && (
-                        <div>
-                            <p style={{ fontSize: '.82rem', color: 'var(--tt-text-muted)', margin: '0 0 .75rem' }}>
-                                Põhineb {feedback.length} kasutaja hinnangul:
-                            </p>
-                            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                                {[
-                                    { key: 'temperatuur', label: 'Temperatuur' },
-                                    { key: 'puhtus',      label: 'Puhtus' },
-                                    { key: 'ohk',         label: 'Õhk / lõhnad' },
-                                    { key: 'varustus',    label: 'Varustus' },
-                                ].map(({ key, label }) => {
-                                    const avg = feedback.reduce((s, f) => s + f[key], 0) / feedback.length;
-                                    return (
-                                        <StarRating
-                                            key={key}
-                                            value={Math.round(avg)}
-                                            label={`${label} (⌀ ${avg.toFixed(1)})`}
-                                        />
-                                    );
-                                })}
+            {/* ── Broneeringute ajalugu ── */}
+            {activeTab === 'ajalugu' && (
+                <div className="bron-card">
+                    <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem' }}>
+                        Viimased broneeringud
+                    </h3>
+                    {recent.length === 0
+                        ? <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Broneeringuid ei leitud.</p>
+                        : (
+                            <div className="bron-table-wrap">
+                                <table className="table table-hover" style={{ fontSize: '.875rem' }}>
+                                    <thead>
+                                        <tr><th>Algus</th><th>Lõpp</th><th>Sündmus</th><th>Kestus</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {recent.map(b => (
+                                            <tr key={b.id}>
+                                                <td>{fmt(b.algus)}</td>
+                                                <td>{fmt(b.lopp)}</td>
+                                                <td>{b.syndmus_label}</td>
+                                                <td>{b.kestus_h} h</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                    )
-                )}
-            </div>
-
-            {/* ── Viimased broneeringud (ajalugu) ── */}
-            <div className="bron-card">
-                <h3 style={{ margin: '0 0 1rem', color: 'var(--tt-purple-500)', fontSize: '1rem' }}>
-                    Viimased broneeringud
-                </h3>
-                {recent.length === 0
-                    ? <p style={{ color: 'var(--tt-text-muted)', margin: 0 }}>Broneeringuid ei leitud.</p>
-                    : (
-                        <div className="bron-table-wrap">
-                            <table className="table table-hover" style={{ fontSize: '.875rem' }}>
-                                <thead>
-                                    <tr><th>Algus</th><th>Lõpp</th><th>Sündmus</th><th>Kestus</th></tr>
-                                </thead>
-                                <tbody>
-                                    {recent.map(b => (
-                                        <tr key={b.id}>
-                                            <td>{fmt(b.algus)}</td>
-                                            <td>{fmt(b.lopp)}</td>
-                                            <td>{b.syndmus_label}</td>
-                                            <td>{b.kestus_h} h</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )
-                }
-            </div>
+                        )
+                    }
+                </div>
+            )}
         </div>
     );
 }
+

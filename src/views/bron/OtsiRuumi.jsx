@@ -1,4 +1,4 @@
-import { Badge, StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
+import { StatusTag, TTNewButton } from '@TalTech-IT/styleguide';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchRooms } from '../../BronBookingsService';
@@ -24,6 +24,16 @@ const KORDUV_OPTS = [
     { value: 'monthly', label: 'Iga kuu' },
 ];
 
+const NADALAP = [
+    { short: 'E', day: 1, long: 'Esmaspäev' },
+    { short: 'T', day: 2, long: 'Teisipäev' },
+    { short: 'K', day: 3, long: 'Kolmapäev' },
+    { short: 'N', day: 4, long: 'Neljapäev' },
+    { short: 'R', day: 5, long: 'Reede' },
+    { short: 'L', day: 6, long: 'Laupäev' },
+    { short: 'P', day: 0, long: 'Pühapäev' },
+];
+
 // Varustuse filtri valikud — vastavad searchRooms() omadused-filterile
 const VARUSTUS_OPTS = [
     { code: 'arvutid',  label: 'Arvutid' },
@@ -34,11 +44,34 @@ const VARUSTUS_OPTS = [
     { code: 'suur',     label: '200+ kohta' },
 ];
 
-function generateDates(kuupaev, korduvus, arv) {
+function generateDates(kuupaev, korduvus, arv, paevad) {
     if (!kuupaev || !korduvus) return [kuupaev].filter(Boolean);
+    const n = Math.min(parseInt(arv, 10) || 5, 52);
+
+    if ((korduvus === 'weekly' || korduvus === 'biweekly') && paevad && paevad.length > 0) {
+        const weekStep = korduvus === 'biweekly' ? 2 : 1;
+        const start = new Date(kuupaev);
+        const sorted = [...paevad].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b));
+        const dow = start.getDay();
+        const toMon = dow === 0 ? -6 : 1 - dow;
+        const dates = [];
+        let weekOffset = 0;
+        while (dates.length < n && weekOffset < 60) {
+            for (const day of sorted) {
+                const d = new Date(start);
+                const dayFromMon = day === 0 ? 6 : day - 1;
+                d.setDate(start.getDate() + toMon + weekOffset * 7 * weekStep + dayFromMon);
+                if (d >= start && dates.length < n) {
+                    dates.push(d.toISOString().slice(0, 10));
+                }
+            }
+            weekOffset++;
+        }
+        return dates;
+    }
+
     const stepMap = { daily: 1, weekly: 7, biweekly: 14, monthly: 30 };
     const step = stepMap[korduvus] || 7;
-    const n = Math.min(parseInt(arv, 10) || 5, 52);
     const dates = [kuupaev];
     let cur = kuupaev;
     for (let i = 1; i < n; i++) {
@@ -64,6 +97,7 @@ export default function OtsiRuumi() {
         korduv: false,
         korduvus: 'weekly',
         korduvus_arv: '5',
+        korduvus_paevad: [2], // teisipäev = 2026-08-11 nädalapäev
     });
 
     const [filters, setFilters] = useState({
@@ -72,6 +106,13 @@ export default function OtsiRuumi() {
 
     function setS(key, val) { setSearch(s => ({ ...s, [key]: val })); }
     function setF(key, val) { setFilters(f => ({ ...f, [key]: val })); }
+    function togglePaev(day) {
+        setSearch(s => {
+            const cur = s.korduvus_paevad || [];
+            const next = cur.includes(day) ? cur.filter(d => d !== day) : [...cur, day];
+            return { ...s, korduvus_paevad: next.length > 0 ? next : cur };
+        });
+    }
     function toggleOmadus(code) {
         setFilters(f => ({
             ...f,
@@ -85,7 +126,7 @@ export default function OtsiRuumi() {
 
     const searchDates = useMemo(() =>
         search.korduv
-            ? generateDates(search.kuupaev, search.korduvus, search.korduvus_arv)
+            ? generateDates(search.kuupaev, search.korduvus, search.korduvus_arv, search.korduvus_paevad)
             : [search.kuupaev].filter(Boolean),
         [search]
     );
@@ -174,13 +215,35 @@ export default function OtsiRuumi() {
                         {/* Korduvuse seaded */}
                         {search.korduv && (
                             <div style={{ background: 'var(--tt-purple-100)', borderRadius: 8, padding: '.75rem', marginTop: '.75rem' }}>
-                                <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+                                <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.5rem', alignItems: 'flex-end' }}>
                                     <div className="bron-form-group" style={{ minWidth: 150 }}>
                                         <label>Sagedus</label>
                                         <select value={search.korduvus} onChange={e => setS('korduvus', e.target.value)}>
                                             {KORDUV_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </select>
                                     </div>
+                                    {(search.korduvus === 'weekly' || search.korduvus === 'biweekly') && (
+                                        <div className="bron-form-group">
+                                            <label>Nädalapäevad</label>
+                                            <div style={{ display: 'flex', gap: '.3rem' }}>
+                                                {NADALAP.map(({ short, day, long }) => {
+                                                    const active = (search.korduvus_paevad || []).includes(day);
+                                                    return (
+                                                        <button key={day} type="button" title={long}
+                                                            onClick={() => togglePaev(day)}
+                                                            style={{
+                                                                width: 34, height: 34, borderRadius: 6,
+                                                                border: active ? 'none' : '1.5px solid var(--tt-purple-300)',
+                                                                background: active ? 'var(--tt-purple-500)' : 'white',
+                                                                color: active ? '#fff' : 'var(--tt-purple-500)',
+                                                                fontWeight: 700, fontSize: '.82rem', cursor: 'pointer',
+                                                            }}
+                                                        >{short}</button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="bron-form-group" style={{ minWidth: 100 }}>
                                         <label>Korduste arv</label>
                                         <input type="number" min="2" max="52" value={search.korduvus_arv}
@@ -192,9 +255,13 @@ export default function OtsiRuumi() {
                                         {searchDates.length}× ({fmtMins(search.kellaaeg)}–{fmtMins(endMin)}):
                                     </span>
                                     {searchDates.slice(0, 6).map(d => (
-                                        <Badge key={d} color="purple" size="sm" style={{ fontSize: '.72rem' }}>
+                                        <span key={d} style={{
+                                            display: 'inline-block', padding: '.15rem .5rem',
+                                            background: 'var(--tt-purple-200)', color: 'var(--tt-purple-700)',
+                                            borderRadius: 4, fontSize: '.78rem', fontWeight: 600,
+                                        }}>
                                             {new Date(d).toLocaleDateString('et-EE', { day: '2-digit', month: '2-digit' })}
-                                        </Badge>
+                                        </span>
                                     ))}
                                     {searchDates.length > 6 && (
                                         <span style={{ fontSize: '.72rem', color: 'var(--tt-text-muted)' }}>+{searchDates.length - 6} veel</span>
@@ -302,9 +369,13 @@ export default function OtsiRuumi() {
                                     </span>
                                 )}
                                 {search.korduv && (
-                                    <Badge color="purple" size="sm" style={{ fontSize: '.72rem' }}>
+                                    <span style={{
+                                        display: 'inline-block', padding: '.15rem .5rem',
+                                        background: 'var(--tt-purple-200)', color: 'var(--tt-purple-700)',
+                                        borderRadius: 4, fontSize: '.75rem', fontWeight: 600,
+                                    }}>
                                         Saadaval {searchDates.length}×
-                                    </Badge>
+                                    </span>
                                 )}
                             </div>
                         </div>
